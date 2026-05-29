@@ -11,11 +11,12 @@ import NVActivityIndicatorView
 
 class AlbumArtworkView: UIView {
 
-    private let artworkCornerRadius: CGFloat = 20
+    private let particleLayer = CAEmitterLayer()
 
     private let containerView: UIView = {
         let view = UIView()
         view.clipsToBounds = true
+        view.backgroundColor = Config.elevatedBackgroundColor
         return view
     }()
 
@@ -23,6 +24,7 @@ class AlbumArtworkView: UIView {
         let view = UIImageView()
         view.contentMode = .scaleAspectFill
         view.clipsToBounds = true
+        view.alpha = 0.88
         return view
     }()
 
@@ -34,7 +36,7 @@ class AlbumArtworkView: UIView {
     }()
 
     private let bufferingIndicator: NVActivityIndicatorView = {
-        let view = NVActivityIndicatorView(frame: .zero, type: .ballPulse, color: .white, padding: nil)
+        let view = NVActivityIndicatorView(frame: .zero, type: .ballPulse, color: Config.tintColor, padding: nil)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -49,6 +51,7 @@ class AlbumArtworkView: UIView {
     }
 
     func setImage(_ image: UIImage?, animated: Bool = false) {
+        let image = image ?? UIImage(named: "logo")
         guard animated else {
             imageView.image = image
             return
@@ -81,6 +84,37 @@ class AlbumArtworkView: UIView {
         }
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        containerView.layer.cornerRadius = min(containerView.bounds.width, containerView.bounds.height) / 2
+        particleLayer.frame = containerView.bounds
+        particleLayer.emitterSize = CGSize(width: containerView.bounds.width * 0.78, height: containerView.bounds.height * 0.78)
+        particleLayer.emitterPosition = CGPoint(x: containerView.bounds.midX, y: containerView.bounds.midY)
+    }
+
+    private func configureParticleLayer() {
+        particleLayer.emitterShape = .circle
+        particleLayer.emitterMode = .surface
+        let cell = CAEmitterCell()
+        cell.birthRate = 150
+        cell.lifetime = 1
+        cell.velocity = 0
+        cell.scale = 0.01
+        cell.scaleRange = 0.014
+        cell.alphaRange = 0.55
+        cell.color = UIColor.white.withAlphaComponent(0.75).cgColor
+        cell.contents = makeParticleImage().cgImage
+        particleLayer.emitterCells = [cell]
+    }
+
+    private func makeParticleImage() -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4))
+        return renderer.image { context in
+            UIColor.white.setFill()
+            context.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+    }
+
     private func setupViews() {
         // Shadow on outer view
         layer.shadowColor = UIColor.black.cgColor
@@ -88,13 +122,14 @@ class AlbumArtworkView: UIView {
         layer.shadowOffset = CGSize(width: 0, height: 10)
         layer.shadowRadius = 20
 
-        containerView.layer.cornerRadius = artworkCornerRadius
         containerView.translatesAutoresizingMaskIntoConstraints = false
 
         imageView.translatesAutoresizingMaskIntoConstraints = false
         bufferingOverlay.translatesAutoresizingMaskIntoConstraints = false
 
         containerView.addSubview(imageView)
+        configureParticleLayer()
+        containerView.layer.addSublayer(particleLayer)
         containerView.addSubview(bufferingOverlay)
         bufferingOverlay.addSubview(bufferingIndicator)
         addSubview(containerView)

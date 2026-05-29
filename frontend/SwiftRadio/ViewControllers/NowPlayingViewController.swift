@@ -33,7 +33,7 @@ class NowPlayingViewController: UIViewController {
     }()
 
     private let backgroundBlurView: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemThickMaterialDark)
+        let blur = UIBlurEffect(style: .systemUltraThinMaterialDark)
         let view = UIVisualEffectView(effect: blur)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -41,7 +41,7 @@ class NowPlayingViewController: UIViewController {
 
     private let backgroundDimView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        view.backgroundColor = Config.backgroundColor.withAlphaComponent(0.76)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -157,7 +157,7 @@ class NowPlayingViewController: UIViewController {
 
         let mainStackView = UIStackView(arrangedSubviews: [albumArtworkView, controlsView])
         mainStackView.axis = .vertical
-        mainStackView.spacing = 24
+        mainStackView.spacing = 30
         mainStackView.distribution = .fill
         mainStackView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -189,7 +189,7 @@ class NowPlayingViewController: UIViewController {
 
         topConstraint = mainStackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8)
 
-        let artworkHeight = albumArtworkView.heightAnchor.constraint(equalTo: mainStackView.heightAnchor, multiplier: 0.55)
+        let artworkHeight = albumArtworkView.heightAnchor.constraint(equalTo: mainStackView.heightAnchor, multiplier: 0.48)
         artworkHeight.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
@@ -237,10 +237,8 @@ class NowPlayingViewController: UIViewController {
     }
 
     func handleMoreMenu() {
-        guard let station = manager.currentStation else { return }
-        let bottomSheet = BottomSheetViewController(station: station)
-        bottomSheet.delegate = self
-        present(bottomSheet, animated: true)
+        let options = RdioPlaybackOptionsViewController()
+        present(options, animated: true)
     }
 
     private func handleTimeSlider(slider: UISlider, event: UIControl.Event) {

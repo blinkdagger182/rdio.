@@ -17,7 +17,7 @@ class StationTableViewCell: UITableViewCell {
     private let cardBlurView: UIVisualEffectView = {
         let blur = UIBlurEffect(style: .systemUltraThinMaterialDark)
         let view = UIVisualEffectView(effect: blur)
-        view.layer.cornerRadius = 14
+        view.layer.cornerRadius = 8
         view.clipsToBounds = true
         view.layer.borderWidth = 0.5
         view.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
@@ -28,11 +28,11 @@ class StationTableViewCell: UITableViewCell {
     private let cardView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
-        view.layer.cornerRadius = 14
+        view.layer.cornerRadius = 8
         view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.2
-        view.layer.shadowOffset = CGSize(width: 0, height: 2)
-        view.layer.shadowRadius = 8
+        view.layer.shadowOpacity = 0.28
+        view.layer.shadowOffset = CGSize(width: 0, height: 8)
+        view.layer.shadowRadius = 18
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -41,8 +41,8 @@ class StationTableViewCell: UITableViewCell {
         let view = UIView()
         view.layer.cornerRadius = 12
         view.layer.borderWidth = 2.5
-        view.layer.borderColor = UIColor.white.cgColor
-        view.layer.shadowColor = UIColor.white.cgColor
+        view.layer.borderColor = Config.tintColor.cgColor
+        view.layer.shadowColor = Config.tintColor.cgColor
         view.layer.shadowOpacity = 0.5
         view.layer.shadowOffset = .zero
         view.layer.shadowRadius = 6
@@ -73,7 +73,8 @@ class StationTableViewCell: UITableViewCell {
 
     let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .preferredFont(forTextStyle: .headline)
+        label.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = Config.primaryTextColor
         label.numberOfLines = 1
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -90,15 +91,15 @@ class StationTableViewCell: UITableViewCell {
 
     let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.font = .preferredFont(forTextStyle: .subheadline)
-        label.textColor = .white.withAlphaComponent(0.55)
+        label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
+        label.textColor = Config.secondaryTextColor
         label.numberOfLines = 1
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
     private let equalizerView: NVActivityIndicatorView = {
-        let view = NVActivityIndicatorView(frame: .zero, type: .audioEqualizer, color: .white, padding: nil)
+        let view = NVActivityIndicatorView(frame: .zero, type: .audioEqualizer, color: Config.tintColor, padding: nil)
         view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             view.widthAnchor.constraint(equalToConstant: 16),
@@ -119,9 +120,22 @@ class StationTableViewCell: UITableViewCell {
     }()
 
     private let bufferingIndicator: NVActivityIndicatorView = {
-        let view = NVActivityIndicatorView(frame: .zero, type: .ballPulse, color: .white, padding: nil)
+        let view = NVActivityIndicatorView(frame: .zero, type: .ballPulse, color: Config.tintColor, padding: nil)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
+    }()
+
+    private let playAccessoryView: UIImageView = {
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        let imageView = UIImageView(image: UIImage(systemName: "play.circle", withConfiguration: config))
+        imageView.tintColor = Config.primaryTextColor.withAlphaComponent(0.82)
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            imageView.widthAnchor.constraint(equalToConstant: 28),
+            imageView.heightAnchor.constraint(equalToConstant: 28)
+        ])
+        return imageView
     }()
 
     private var isAnimatingPulse = false
@@ -194,7 +208,7 @@ class StationTableViewCell: UITableViewCell {
         vStackView.translatesAutoresizingMaskIntoConstraints = false
 
         // Main horizontal stack
-        let hStackView = UIStackView(arrangedSubviews: [artworkContainer, vStackView])
+        let hStackView = UIStackView(arrangedSubviews: [artworkContainer, vStackView, playAccessoryView])
         hStackView.spacing = 14
         hStackView.axis = .horizontal
         hStackView.alignment = .center
@@ -209,8 +223,8 @@ class StationTableViewCell: UITableViewCell {
             // Card inset from contentView
             cardView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
             cardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -5),
-            cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
 
             // Blur fills card
             cardBlurView.topAnchor.constraint(equalTo: cardView.topAnchor),
@@ -221,8 +235,8 @@ class StationTableViewCell: UITableViewCell {
             // HStack inside blur content
             hStackView.topAnchor.constraint(equalTo: cardBlurView.contentView.topAnchor, constant: 12),
             hStackView.bottomAnchor.constraint(equalTo: cardBlurView.contentView.bottomAnchor, constant: -12),
-            hStackView.leadingAnchor.constraint(equalTo: cardBlurView.contentView.leadingAnchor, constant: 14),
-            hStackView.trailingAnchor.constraint(equalTo: cardBlurView.contentView.trailingAnchor, constant: -14),
+            hStackView.leadingAnchor.constraint(equalTo: cardBlurView.contentView.leadingAnchor, constant: 12),
+            hStackView.trailingAnchor.constraint(equalTo: cardBlurView.contentView.trailingAnchor, constant: -12),
 
             // Artwork container size
             artworkContainer.widthAnchor.constraint(equalToConstant: artworkSize),
@@ -264,6 +278,8 @@ class StationTableViewCell: UITableViewCell {
         guard isCurrentStation else {
             stopPulseAnimation()
             pulseRingView.alpha = 0
+            playAccessoryView.image = UIImage(systemName: "play.circle")
+            playAccessoryView.tintColor = Config.primaryTextColor.withAlphaComponent(0.72)
             equalizerView.stopAnimating()
             equalizerView.alpha = 0
             bufferingIndicator.stopAnimating()
@@ -279,6 +295,8 @@ class StationTableViewCell: UITableViewCell {
             equalizerView.alpha = 0
             bufferingIndicator.startAnimating()
             bufferingOverlay.alpha = 1
+            playAccessoryView.image = UIImage(systemName: "dot.radiowaves.left.and.right")
+            playAccessoryView.tintColor = Config.tintColor
         } else if isPlaying {
             // Pulse ring + equalizer
             bufferingIndicator.stopAnimating()
@@ -286,6 +304,8 @@ class StationTableViewCell: UITableViewCell {
             startPulseAnimation()
             equalizerView.startAnimating()
             equalizerView.alpha = 0.7
+            playAccessoryView.image = UIImage(systemName: "pause.circle.fill")
+            playAccessoryView.tintColor = Config.tintColor
         } else {
             // Stopped — subtle indicators
             bufferingIndicator.stopAnimating()
@@ -295,6 +315,8 @@ class StationTableViewCell: UITableViewCell {
             pulseRingView.transform = .identity
             equalizerView.stopAnimating()
             equalizerView.alpha = 0.4
+            playAccessoryView.image = UIImage(systemName: "play.circle.fill")
+            playAccessoryView.tintColor = Config.tintColor
         }
     }
 

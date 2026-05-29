@@ -29,6 +29,7 @@ class ControlsView: UIView {
         let label = MarqueeLabel(frame: .zero, rate: 30, fadeLength: 10)
         label.font = UIFont.preferredFont(forTextStyle: .title2).bold()
         label.textAlignment = .center
+        label.textColor = Config.primaryTextColor
         label.setContentCompressionResistancePriority(.required, for: .vertical)
         label.trailingBuffer = 30
         return label
@@ -39,8 +40,9 @@ class ControlsView: UIView {
         let label = UILabel()
         label.font = UIFont.preferredFont(forTextStyle: .title3)
         label.textAlignment = .center
+        label.textColor = Config.secondaryTextColor
         label.setContentCompressionResistancePriority(.required, for: .vertical)
-        label.alpha = 0.7
+        label.alpha = 1
         return label
     }()
 
@@ -49,7 +51,7 @@ class ControlsView: UIView {
         slider.value = 0.0
         slider.translatesAutoresizingMaskIntoConstraints = false
         slider.minimumTrackTintColor = Config.tintColor
-        slider.maximumTrackTintColor = Config.tintColor.withAlphaComponent(0.3)
+        slider.maximumTrackTintColor = Config.secondaryTextColor.withAlphaComponent(0.25)
         return slider
     }()
 
@@ -57,6 +59,7 @@ class ControlsView: UIView {
         let label = UILabel()
         label.text = "00:00"
         label.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+        label.textColor = Config.secondaryTextColor
         label.setContentCompressionResistancePriority(.required, for: .vertical)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.textAlignment = .left
@@ -68,6 +71,7 @@ class ControlsView: UIView {
         let label = UILabel()
         label.text = "00:00"
         label.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+        label.textColor = Config.secondaryTextColor
         label.setContentCompressionResistancePriority(.required, for: .vertical)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.textAlignment = .right
@@ -87,7 +91,7 @@ class ControlsView: UIView {
         let label = UILabel()
         label.text = Content.Player.liveBadge
         label.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .white.withAlphaComponent(0.9)
+        label.textColor = Config.tintColor
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
 
@@ -108,10 +112,10 @@ class ControlsView: UIView {
 
     private let playPauseButton: UIButton = {
         let button = UIButton()
-        let config = UIImage.SymbolConfiguration(pointSize: 60, weight: .regular)
+        let config = UIImage.SymbolConfiguration(pointSize: 64, weight: .regular)
         button.setImage(UIImage(systemName: "play.circle.fill", withConfiguration: config), for: .normal)
         button.setImage(UIImage(systemName: "stop.circle.fill", withConfiguration: config), for: .selected)
-        button.tintColor = Config.tintColor
+        button.tintColor = Config.primaryTextColor
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -120,7 +124,7 @@ class ControlsView: UIView {
         let button = UIButton()
         let config = UIImage.SymbolConfiguration(pointSize: 28, weight: .bold)
         button.setImage(UIImage(systemName: "forward.fill", withConfiguration: config), for: .normal)
-        button.tintColor = Config.tintColor.withAlphaComponent(0.7)
+        button.tintColor = Config.primaryTextColor.withAlphaComponent(0.78)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -129,7 +133,7 @@ class ControlsView: UIView {
         let button = UIButton()
         let config = UIImage.SymbolConfiguration(pointSize: 28, weight: .bold)
         button.setImage(UIImage(systemName: "backward.fill", withConfiguration: config), for: .normal)
-        button.tintColor = Config.tintColor.withAlphaComponent(0.7)
+        button.tintColor = Config.primaryTextColor.withAlphaComponent(0.78)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -137,7 +141,7 @@ class ControlsView: UIView {
     private let airPlayButton: AVRoutePickerView = {
         let button = AVRoutePickerView()
         button.activeTintColor = Config.tintColor
-        button.tintColor = Config.tintColor.withAlphaComponent(0.7)
+        button.tintColor = Config.primaryTextColor.withAlphaComponent(0.74)
         button.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: 44),

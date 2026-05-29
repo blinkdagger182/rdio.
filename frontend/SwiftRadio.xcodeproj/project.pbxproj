@@ -48,6 +48,8 @@
 		CA3A11042D4E000000111002 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3A11032D4E000000111002 /* Content.swift */; };
 		CA3A11052D4E000000111002 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA3A11032D4E000000111002 /* Content.swift */; };
 		CA58087D2D40BAC000F8082B /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA58087B2D40BAC000F8082B /* CarPlaySceneDelegate.swift */; };
+		CA5E00012F41000100000001 /* RdioExperienceViewControllers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5E00002F41000100000000 /* RdioExperienceViewControllers.swift */; };
+		CA5E00022F41000100000002 /* RdioExperienceViewControllers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5E00002F41000100000000 /* RdioExperienceViewControllers.swift */; };
 		CA5F00022F40A00000000002 /* GradientBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5F00012F40A00000000001 /* GradientBackgroundView.swift */; };
 		CA5F00032F40A00000000003 /* GradientBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5F00012F40A00000000001 /* GradientBackgroundView.swift */; };
 		CA5F00042F41000000000001 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = CA5F00062F41000000000003 /* Localizable.xcstrings */; };
@@ -172,6 +174,7 @@
 		CA3A11002D4E000000111001 /* InfoSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoSection.swift; sourceTree = "<group>"; };
 		CA3A11032D4E000000111002 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
 		CA58087B2D40BAC000F8082B /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		CA5E00002F41000100000000 /* RdioExperienceViewControllers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RdioExperienceViewControllers.swift; sourceTree = "<group>"; };
 		CA5F00012F40A00000000001 /* GradientBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientBackgroundView.swift; sourceTree = "<group>"; };
 		CA5F00062F41000000000003 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		CAB4E8282D3D7DC7001282E9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -393,6 +396,7 @@
 				CA142F692D3D9A0D0071A388 /* BottomSheetViewController.swift */,
 				94452E541AD7086800BFE7A5 /* AboutViewController.swift */,
 				94D1D0A41AD6D6230022CA11 /* InfoDetailViewController.swift */,
+				CA5E00002F41000100000000 /* RdioExperienceViewControllers.swift */,
 				CE6036122A47A87A00E15E15 /* StationsViewController.swift */,
 				CEE9A2772B5345C30018FE68 /* NowPlayingViewController.swift */,
 			);
@@ -599,6 +603,7 @@
 				CE9EE8DE293BB41300F62041 /* BaseController.swift in Sources */,
 				CA142F6D2D3D9DFB0071A388 /* BottomSheetHandler.swift in Sources */,
 				CEE9A2782B5345C30018FE68 /* NowPlayingViewController.swift in Sources */,
+				CA5E00012F41000100000001 /* RdioExperienceViewControllers.swift in Sources */,
 				53113F39230C720900462C0E /* ShareActivity.swift in Sources */,
 				CA142F682D3D8E2F0071A388 /* NSLayoutConstraint+with.swift in Sources */,
 				CE963ECC29135A6F004F299E /* StationsManager.swift in Sources */,
@@ -643,6 +648,7 @@
 				CA142F6E2D3D9DFB0071A388 /* BottomSheetHandler.swift in Sources */,
 				CA2511B62D458033006D1A99 /* AudioSetupService.swift in Sources */,
 				CEE9A2792B5345C30018FE68 /* NowPlayingViewController.swift in Sources */,
+				CA5E00022F41000100000002 /* RdioExperienceViewControllers.swift in Sources */,
 				CE6A3E33291F376D0058C82A /* ShareActivity.swift in Sources */,
 				CA142F672D3D8E2F0071A388 /* NSLayoutConstraint+with.swift in Sources */,
 				CE6A3E35291F376D0058C82A /* StationsManager.swift in Sources */,

@@ -19,7 +19,7 @@ class GradientBackgroundView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .black
+        backgroundColor = Config.backgroundColor
         updateGradientColors()
         layer.addSublayer(gradientLayer)
     }
@@ -34,13 +34,12 @@ class GradientBackgroundView: UIView {
     }
 
     private func updateGradientColors() {
-        let color = Config.gradientColor
         gradientLayer.colors = [
-            color.withAlphaComponent(0.3).cgColor,
-            color.withAlphaComponent(0.15).cgColor,
-            color.withAlphaComponent(0.05).cgColor,
-            UIColor.clear.cgColor
+            Config.secondaryBackgroundColor.withAlphaComponent(0.95).cgColor,
+            Config.gradientColor.withAlphaComponent(0.48).cgColor,
+            Config.backgroundColor.withAlphaComponent(0.92).cgColor,
+            Config.backgroundColor.cgColor
         ]
-        gradientLayer.locations = [0.0, 0.3, 0.6, 1.0]
+        gradientLayer.locations = [0.0, 0.34, 0.72, 1.0]
     }
 }

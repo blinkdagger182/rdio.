@@ -20,6 +20,7 @@ class LoaderController: BaseController {
     
     private let activityIndicatorView: UIActivityIndicatorView = {
         let view = UIActivityIndicatorView(style: .medium)
+        view.color = Config.tintColor
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -28,6 +29,7 @@ class LoaderController: BaseController {
         let label = UILabel()
         label.textAlignment = .center
         label.font = UIFont.preferredFont(forTextStyle: .headline)
+        label.textColor = Config.primaryTextColor
         label.numberOfLines = 0
         label.text = Content.Loader.errorTitle
         return label
@@ -38,6 +40,7 @@ class LoaderController: BaseController {
         label.textAlignment = .center
         label.numberOfLines = 0
         label.font = UIFont.preferredFont(forTextStyle: .footnote)
+        label.textColor = Config.secondaryTextColor
         return label
     }()
     
@@ -81,19 +84,41 @@ class LoaderController: BaseController {
     override func setupViews() {
         super.setupViews()
         
-        // Logo Image
-        let logoImage = UIImage(named: "logo")
-        let logoImageView = UIImageView(image: logoImage)
-        logoImageView.contentMode = .scaleAspectFit
+        let logoImageView = UIImageView(image: UIImage(named: "logo"))
+        logoImageView.contentMode = .scaleAspectFill
+        logoImageView.clipsToBounds = true
+        logoImageView.layer.cornerRadius = 42
+        logoImageView.layer.borderWidth = 1
+        logoImageView.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
+        let wordmarkLabel = UILabel()
+        wordmarkLabel.text = "rdio."
+        wordmarkLabel.font = UIFont.systemFont(ofSize: 34, weight: .regular)
+        wordmarkLabel.textAlignment = .center
+        wordmarkLabel.textColor = Config.primaryTextColor
+        wordmarkLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        let taglineLabel = UILabel()
+        taglineLabel.text = "live radio, beautifully tuned."
+        taglineLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        taglineLabel.textAlignment = .center
+        taglineLabel.textColor = Config.tertiaryTextColor
+        taglineLabel.translatesAutoresizingMaskIntoConstraints = false
+
         view.addSubview(logoImageView)
+        view.addSubview(wordmarkLabel)
+        view.addSubview(taglineLabel)
 
         NSLayoutConstraint.activate([
             logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            logoImageView.widthAnchor.constraint(equalToConstant: 220),
-            logoImageView.heightAnchor.constraint(equalToConstant: 220),
+            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -28),
+            logoImageView.widthAnchor.constraint(equalToConstant: 132),
+            logoImageView.heightAnchor.constraint(equalToConstant: 132),
+            wordmarkLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 20),
+            wordmarkLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            taglineLabel.topAnchor.constraint(equalTo: wordmarkLabel.bottomAnchor, constant: 96),
+            taglineLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         ])
         
         // Activity Indicator
@@ -101,12 +126,13 @@ class LoaderController: BaseController {
         
         NSLayoutConstraint.activate([
             activityIndicatorView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicatorView.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 32)
+            activityIndicatorView.topAnchor.constraint(equalTo: wordmarkLabel.bottomAnchor, constant: 28)
         ])
         
         // Retry button
         let retryButton = UIButton(type: .system)
         retryButton.setTitle(Content.Loader.retryButton, for: .normal)
+        retryButton.tintColor = Config.tintColor
         retryButton.addTarget(self, action: #selector(handleRetry), for: .touchUpInside)
         
         // Stack view
@@ -118,7 +144,7 @@ class LoaderController: BaseController {
         
         NSLayoutConstraint.activate([
             stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stackView.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 32),
+            stackView.topAnchor.constraint(equalTo: wordmarkLabel.bottomAnchor, constant: 28),
             stackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.7)
         ])
     }

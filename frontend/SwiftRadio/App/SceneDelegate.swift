@@ -29,6 +29,25 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         UINavigationBar.appearance().barStyle = .black
         UINavigationBar.appearance().tintColor = Config.tintColor
         UINavigationBar.appearance().prefersLargeTitles = true
+
+        let navigationAppearance = UINavigationBarAppearance()
+        navigationAppearance.configureWithTransparentBackground()
+        navigationAppearance.backgroundColor = .clear
+        navigationAppearance.shadowColor = .clear
+        navigationAppearance.largeTitleTextAttributes = [
+            .foregroundColor: Config.primaryTextColor,
+            .font: UIFont.systemFont(ofSize: 34, weight: .regular)
+        ]
+        navigationAppearance.titleTextAttributes = [
+            .foregroundColor: Config.primaryTextColor,
+            .font: UIFont.systemFont(ofSize: 17, weight: .medium)
+        ]
+        UINavigationBar.appearance().standardAppearance = navigationAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navigationAppearance
+        UINavigationBar.appearance().compactAppearance = navigationAppearance
+
+        UISearchBar.appearance().tintColor = Config.tintColor
+        UITableView.appearance().indicatorStyle = .white
     }
     
     private func setupCoordinator(windowScene: UIWindowScene) {

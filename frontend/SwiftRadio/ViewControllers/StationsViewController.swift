@@ -37,6 +37,13 @@ class StationsViewController: BaseController, Handoffable {
         let controller = UISearchController(searchResultsController: nil)
         controller.obscuresBackgroundDuringPresentation = false
         controller.hidesNavigationBarDuringPresentation = true
+        controller.searchBar.searchTextField.backgroundColor = Config.elevatedBackgroundColor
+        controller.searchBar.searchTextField.textColor = Config.primaryTextColor
+        controller.searchBar.searchTextField.leftView?.tintColor = Config.tertiaryTextColor
+        controller.searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Search stations",
+            attributes: [.foregroundColor: Config.tertiaryTextColor]
+        )
         return controller
     }()
 
@@ -86,6 +93,7 @@ class StationsViewController: BaseController, Handoffable {
         tableView.backgroundColor = .clear
         tableView.backgroundView = nil
         tableView.separatorStyle = .none
+        tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 24, right: 0)
         let cellNib = UINib(nibName: "NothingFoundCell", bundle: nil)
         tableView.register(cellNib, forCellReuseIdentifier: "NothingFound")
         tableView.register(StationTableViewCell.self)
@@ -106,7 +114,7 @@ class StationsViewController: BaseController, Handoffable {
         navigationItem.backButtonDisplayMode = .minimal
 
         // NavigationBar items
-        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal"), style: .plain, target: self, action: #selector(handleMenuTap))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "slider.horizontal.3"), style: .plain, target: self, action: #selector(handleMenuTap))
 
         // Setup Player
         player.addObserver(self)
@@ -125,7 +133,7 @@ class StationsViewController: BaseController, Handoffable {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        title = Content.Stations.title
+        title = "rdio."
     }
 
     @objc func refresh(sender: AnyObject) {
@@ -195,6 +203,7 @@ class StationsViewController: BaseController, Handoffable {
         super.setupViews()
 
         tableView.addSubview(refreshControl)
+        tableView.tableHeaderView = makeHeaderView()
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
@@ -203,6 +212,48 @@ class StationsViewController: BaseController, Handoffable {
             tableView.bottomAnchor.constraint(equalTo: view.layoutMarginsGuide.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
         ])
+    }
+
+    private func makeHeaderView() -> UIView {
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: view.bounds.width, height: 138))
+
+        let eyebrowLabel = UILabel()
+        eyebrowLabel.text = "LIVE. CURATED. PERSONAL."
+        eyebrowLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+        eyebrowLabel.textColor = Config.tertiaryTextColor
+        eyebrowLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        let titleLabel = UILabel()
+        titleLabel.text = "live radio,\nbeautifully tuned."
+        titleLabel.font = UIFont.systemFont(ofSize: 28, weight: .regular)
+        titleLabel.textColor = Config.primaryTextColor
+        titleLabel.numberOfLines = 2
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        let subtitleLabel = UILabel()
+        subtitleLabel.text = "discover stations for focus, music, news, and the drive."
+        subtitleLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = Config.secondaryTextColor
+        subtitleLabel.numberOfLines = 2
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        container.addSubview(eyebrowLabel)
+        container.addSubview(titleLabel)
+        container.addSubview(subtitleLabel)
+
+        NSLayoutConstraint.activate([
+            eyebrowLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
+            eyebrowLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 22),
+            eyebrowLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -22),
+            titleLabel.topAnchor.constraint(equalTo: eyebrowLabel.bottomAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: eyebrowLabel.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: eyebrowLabel.trailingAnchor),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+            subtitleLabel.leadingAnchor.constraint(equalTo: eyebrowLabel.leadingAnchor),
+            subtitleLabel.trailingAnchor.constraint(equalTo: eyebrowLabel.trailingAnchor)
+        ])
+
+        return container
     }
 }
 

@@ -19,10 +19,17 @@ struct Config {
     }
 
     // Tint color used across the app (navigation bar, controls, etc.)
-    static let tintColor: UIColor = .white
+    static let tintColor = UIColor(red: 0.95, green: 0.43, blue: 0.04, alpha: 1.0)
 
     // Gradient background color (independent from tintColor)
-    static let gradientColor: UIColor = .white
+    static let gradientColor = UIColor(red: 0.26, green: 0.36, blue: 0.42, alpha: 1.0)
+
+    static let backgroundColor = UIColor(red: 0.035, green: 0.043, blue: 0.047, alpha: 1.0)
+    static let elevatedBackgroundColor = UIColor(red: 0.075, green: 0.095, blue: 0.105, alpha: 1.0)
+    static let secondaryBackgroundColor = UIColor(red: 0.11, green: 0.15, blue: 0.17, alpha: 1.0)
+    static let primaryTextColor = UIColor(white: 0.96, alpha: 1.0)
+    static let secondaryTextColor = UIColor(white: 0.73, alpha: 1.0)
+    static let tertiaryTextColor = UIColor(white: 0.52, alpha: 1.0)
 
     // Choose where the app gets its station list.
     static let stationsSource: StationsSource = .radioBrowser

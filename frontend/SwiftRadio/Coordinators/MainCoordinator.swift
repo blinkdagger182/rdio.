@@ -88,9 +88,51 @@ class MainCoordinator: NavigationCoordinator {
 
 extension MainCoordinator: LoaderControllerDelegate {
     func didFinishLoading(_ controller: LoaderController, stations: [RadioStation]) {
-        let stationsVC = StationsViewController()
-        stationsVC.delegate = self
-        navigationController.setViewControllers([stationsVC], animated: false)
+        navigationController.setViewControllers([makeRdioTabBarController()], animated: false)
+    }
+}
+
+// MARK: - Rdio Experience
+
+private extension MainCoordinator {
+    func makeRdioTabBarController() -> UITabBarController {
+        let home = RdioHomeViewController()
+        let explore = RdioExploreViewController()
+        let library = RdioLibraryViewController()
+        let search = RdioSearchViewController()
+        [home, explore, library, search].forEach { $0.experienceDelegate = self }
+
+        let tabBar = RdioTabBarController()
+        tabBar.setViewControllers([home, explore, library, search], animated: false)
+        return tabBar
+    }
+}
+
+extension MainCoordinator: RdioExperienceDelegate {
+    func rdioDidSelectStation(_ station: RadioStation, from controller: UIViewController) {
+        didSelectStation(station, from: StationsViewController())
+    }
+
+    func rdioDidRequestNowPlaying(from controller: UIViewController) {
+        guard StationsManager.shared.currentStation != nil else {
+            if let station = StationsManager.shared.stations.first {
+                StationsManager.shared.set(station: station)
+            }
+            presentPopupBarIfNeeded()
+            navigationController.openPopup(animated: true)
+            return
+        }
+        presentPopupBarIfNeeded()
+        navigationController.openPopup(animated: true)
+    }
+
+    func rdioDidRequestPlaybackOptions(from controller: UIViewController) {
+        let options = RdioPlaybackOptionsViewController()
+        controller.present(options, animated: true)
+    }
+
+    func rdioDidRequestAbout(from controller: UIViewController) {
+        openAbout()
     }
 }
 

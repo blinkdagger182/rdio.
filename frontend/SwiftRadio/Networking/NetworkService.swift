@@ -58,6 +58,20 @@ private struct RadioBrowserStation: Decodable {
     }
 }
 
+private struct BackendStationsResponse: Decodable {
+    let stations: [BackendStation]
+    let nextOffset: Int?
+}
+
+private struct BackendStation: Decodable {
+    let name: String
+    let website: String?
+    let streamURL: String
+    let imageURL: String
+    let desc: String
+    let longDesc: String
+}
+
 private extension RadioBrowserStation {
     var radioStation: RadioStation? {
         let streamURL = urlResolved.isEmpty ? url : urlResolved
@@ -84,6 +98,20 @@ private extension RadioBrowserStation {
             imageURL: favicon,
             desc: description,
             longDesc: tagList.isEmpty ? description : tagList
+        )
+    }
+}
+
+private extension BackendStation {
+    var radioStation: RadioStation? {
+        guard !name.isEmpty, URL(string: streamURL) != nil else { return nil }
+        return RadioStation(
+            name: name,
+            website: website,
+            streamURL: streamURL,
+            imageURL: imageURL,
+            desc: desc,
+            longDesc: longDesc
         )
     }
 }
@@ -121,7 +149,22 @@ struct NetworkService {
             return try await fetchSwiftRadioStations()
         case .radioBrowser:
             return try await fetchRadioBrowserStations()
+        case .backend:
+            return try await fetchBackendStations()
         }
+    }
+
+    static func searchStations(
+        query: String? = nil,
+        filter: String? = nil,
+        limit: Int = Config.backendStationLimit,
+        offset: Int = 0
+    ) async throws -> [RadioStation] {
+        if Config.backendBaseURL != nil {
+            return try await fetchBackendStations(query: query, filter: filter, limit: limit, offset: offset)
+        }
+
+        return try await fetchRadioBrowserStations(query: query, filter: filter, limit: limit, offset: offset)
     }
 
     private static func fetchSwiftRadioStations() async throws -> [RadioStation] {
@@ -164,7 +207,46 @@ struct NetworkService {
         return stations
     }
 
-    private static func fetchRadioBrowserStations() async throws -> [RadioStation] {
+    private static func fetchBackendStations(
+        query: String? = nil,
+        filter: String? = nil,
+        limit: Int = Config.backendStationLimit,
+        offset: Int = 0
+    ) async throws -> [RadioStation] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else {
+            throw NetworkError.urlNotValid
+        }
+
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/stations"), resolvingAgainstBaseURL: false)
+        var queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)"),
+            URLQueryItem(name: "order", value: "votes"),
+            URLQueryItem(name: "reverse", value: "true")
+        ]
+
+        if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let key = backendFilterKey(for: filter)
+            queryItems.append(URLQueryItem(name: key, value: query))
+        }
+
+        components?.queryItems = queryItems
+
+        guard let url = components?.url else {
+            throw NetworkError.urlNotValid
+        }
+
+        let response: BackendStationsResponse = try await fetchJSON(url: url)
+        return response.stations.compactMap(\.radioStation)
+    }
+
+    private static func fetchRadioBrowserStations(
+        query: String? = nil,
+        filter: String? = nil,
+        limit: Int? = Config.radioBrowserStationLimit,
+        offset: Int = 0
+    ) async throws -> [RadioStation] {
         let baseURL = try await resolveRadioBrowserBaseURL()
 
         if Config.debugLog, let stats = try? await fetchRadioBrowserStats(baseURL: baseURL) {
@@ -175,12 +257,18 @@ struct NetworkService {
         var components = URLComponents(url: baseURL.appendingPathComponent("json/stations/search"), resolvingAgainstBaseURL: false)
         var queryItems = [
             URLQueryItem(name: "hidebroken", value: Config.radioBrowserHideBroken ? "true" : "false"),
+            URLQueryItem(name: "offset", value: "\(offset)"),
             URLQueryItem(name: "order", value: "clickcount"),
             URLQueryItem(name: "reverse", value: "true")
         ]
 
-        if let limit = Config.radioBrowserStationLimit {
+        if let limit {
             queryItems.append(URLQueryItem(name: "limit", value: "\(limit)"))
+        }
+
+        if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let key = backendFilterKey(for: filter)
+            queryItems.append(URLQueryItem(name: key, value: query))
         }
 
         if let countryCode = Config.radioBrowserCountryCode, !countryCode.isEmpty {
@@ -193,7 +281,7 @@ struct NetworkService {
             throw NetworkError.urlNotValid
         }
 
-        let stations: [RadioBrowserStation] = try await fetchRadioBrowser(url: url)
+        let stations: [RadioBrowserStation] = try await fetchJSON(url: url)
         let mappedStations = stations.compactMap(\.radioStation)
 
         if Config.debugLog {
@@ -208,7 +296,7 @@ struct NetworkService {
     }
 
     private static func fetchRadioBrowserStats(baseURL: URL) async throws -> RadioBrowserStats {
-        try await fetchRadioBrowser(url: baseURL.appendingPathComponent("json/stats"))
+        try await fetchJSON(url: baseURL.appendingPathComponent("json/stats"))
     }
 
     private static func resolveRadioBrowserBaseURL() async throws -> URL {
@@ -217,7 +305,7 @@ struct NetworkService {
         }
 
         do {
-            let servers: [RadioBrowserServer] = try await fetchRadioBrowser(url: serversURL)
+            let servers: [RadioBrowserServer] = try await fetchJSON(url: serversURL)
             guard let server = servers.first, let url = URL(string: "https://\(server.name)") else {
                 throw NetworkError.noRadioBrowserServerAvailable
             }
@@ -231,7 +319,7 @@ struct NetworkService {
         }
     }
 
-    private static func fetchRadioBrowser<T: Decodable>(url: URL) async throws -> T {
+    private static func fetchJSON<T: Decodable>(url: URL) async throws -> T {
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue(Config.radioBrowserAppName, forHTTPHeaderField: "User-Agent")
@@ -243,6 +331,19 @@ struct NetworkService {
         }
 
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private static func backendFilterKey(for filter: String?) -> String {
+        switch filter?.lowercased() {
+        case "countries", "country":
+            return "country"
+        case "language", "languages":
+            return "language"
+        case "genres", "genre", "tag", "tags":
+            return "tag"
+        default:
+            return "search"
+        }
     }
 
     // MARK: - Images

@@ -24,6 +24,7 @@ class MainCoordinator: NavigationCoordinator {
 
     private let player = FRadioPlayer.shared
     private var isPopupBarPresented = false
+    private weak var rdioTabBarController: RdioTabBarController?
 
     func start() {
         let loaderVC = LoaderController()
@@ -39,12 +40,17 @@ class MainCoordinator: NavigationCoordinator {
 
     func presentPopupBarIfNeeded() {
         guard !isPopupBarPresented else { return }
-        navigationController.popupBar.barStyle = .prominent
-        navigationController.popupBar.tintColor = Config.tintColor
-        navigationController.popupBar.progressViewStyle = .bottom
-        navigationController.popupContentView.popupCloseButtonStyle = .chevron
-        navigationController.presentPopupBar(with: nowPlayingViewController, animated: true)
+        let container = popupContainer
+        container.popupBar.barStyle = .prominent
+        container.popupBar.tintColor = Config.tintColor
+        container.popupBar.progressViewStyle = .bottom
+        container.popupContentView.popupCloseButtonStyle = .chevron
+        container.presentPopupBar(with: nowPlayingViewController, animated: true)
         isPopupBarPresented = true
+    }
+
+    private var popupContainer: UIViewController {
+        rdioTabBarController ?? navigationController
     }
 
     // MARK: - Shared
@@ -88,6 +94,7 @@ class MainCoordinator: NavigationCoordinator {
 
 extension MainCoordinator: LoaderControllerDelegate {
     func didFinishLoading(_ controller: LoaderController, stations: [RadioStation]) {
+        navigationController.setNavigationBarHidden(true, animated: false)
         navigationController.setViewControllers([makeRdioTabBarController()], animated: false)
     }
 }
@@ -104,6 +111,7 @@ private extension MainCoordinator {
 
         let tabBar = RdioTabBarController()
         tabBar.setViewControllers([home, explore, library, search], animated: false)
+        rdioTabBarController = tabBar
         return tabBar
     }
 }
@@ -119,11 +127,11 @@ extension MainCoordinator: RdioExperienceDelegate {
                 StationsManager.shared.set(station: station)
             }
             presentPopupBarIfNeeded()
-            navigationController.openPopup(animated: true)
+            popupContainer.openPopup(animated: true)
             return
         }
         presentPopupBarIfNeeded()
-        navigationController.openPopup(animated: true)
+        popupContainer.openPopup(animated: true)
     }
 
     func rdioDidRequestPlaybackOptions(from controller: UIViewController) {
@@ -144,16 +152,17 @@ extension MainCoordinator: StationsViewControllerDelegate {
         let isNewStation = station != StationsManager.shared.currentStation
         if isNewStation {
             StationsManager.shared.set(station: station)
+            player.play()
             presentPopupBarIfNeeded()
         } else if player.isPlaying {
-            navigationController.openPopup(animated: true)
+            popupContainer.openPopup(animated: true)
         } else {
             player.togglePlaying()
         }
     }
 
     func didTapNowPlaying(_ stationsViewController: StationsViewController) {
-        navigationController.openPopup(animated: true)
+        popupContainer.openPopup(animated: true)
     }
 
     func presentAbout(_ stationsViewController: StationsViewController) {
@@ -172,11 +181,11 @@ extension MainCoordinator: NowPlayingViewControllerDelegate {
         case .info:
             let infoController = InfoDetailViewController(station: station)
             navigationController.pushViewController(infoController, animated: true)
-            navigationController.closePopup(animated: true)
+            popupContainer.closePopup(animated: true)
         case .website:
             if let website = station.website, let url = URL(string: website) {
                 let safariVC = SFSafariViewController(url: url)
-                navigationController.closePopup(animated: true, completion: { [weak self] in
+                popupContainer.closePopup(animated: true, completion: { [weak self] in
                     self?.navigationController.present(safariVC, animated: true)
                 })
             }

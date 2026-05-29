@@ -74,7 +74,11 @@ class StationsManager {
             reset()
             return
         }
-        
+
+        if !stations.contains(station) {
+            stations.insert(station, at: 0)
+        }
+
         currentStation = station
         player.radioURL = URL(string: station.streamURL)
     }

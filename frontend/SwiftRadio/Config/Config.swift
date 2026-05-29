@@ -16,6 +16,7 @@ struct Config {
         case bundledJSON
         case remoteJSON
         case radioBrowser
+        case backend
     }
 
     // Tint color used across the app (navigation bar, controls, etc.)
@@ -32,7 +33,7 @@ struct Config {
     static let tertiaryTextColor = UIColor(white: 0.52, alpha: 1.0)
 
     // Choose where the app gets its station list.
-    static let stationsSource: StationsSource = .radioBrowser
+    static let stationsSource: StationsSource = .backend
 
     // Legacy SwiftRadio JSON source settings.
     static let useLocalStations = stationsSource == .bundledJSON
@@ -43,6 +44,10 @@ struct Config {
     static let radioBrowserStationLimit: Int? = 1_000
     static let radioBrowserCountryCode: String? = nil
     static let radioBrowserHideBroken = true
+
+    // Vercel proxy for Radio Browser. Keeps the app off a single mirror and enables filtered search.
+    static let backendBaseURL: String? = "https://rdio-backend.vercel.app"
+    static let backendStationLimit = 50
 
     // Set this to "true" to enable the search bar
     static let searchable = true

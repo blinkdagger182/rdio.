@@ -1,0 +1,13 @@
+.DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
+build/
+dist/
+node_modules/
+coverage/
+*.mobileprovision
+*.ipa
+*.dSYM
+.env
+.env.*

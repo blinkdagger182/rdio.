@@ -45,6 +45,9 @@ class StationsManager {
     
     private var observations = [ObjectIdentifier : Observation]()
     private let player = FRadioPlayer.shared
+    private var fetchOffset: Int = 0
+    private(set) var isLoadingMore: Bool = false
+    private(set) var hasMoreStations: Bool = true
     
     private init() {
         self.player.addObserver(self)
@@ -52,10 +55,14 @@ class StationsManager {
     
     @MainActor
     func fetch() async throws {
-        let stations = try await NetworkService.fetchStations()
-        guard self.stations != stations else { return }
-        self.stations = stations
-        if let currentStation, !stations.contains(currentStation) { reset() }
+        fetchOffset = 0
+        hasMoreStations = true
+        let newStations = try await NetworkService.fetchStations()
+        fetchOffset = newStations.count
+        hasMoreStations = newStations.count >= Config.backendStationLimit
+        guard self.stations != newStations else { return }
+        self.stations = newStations
+        if let currentStation, !newStations.contains(currentStation) { reset() }
     }
 
     func fetch(_ completion: ((Result<[RadioStation], Error>) -> Void)? = nil) {
@@ -66,6 +73,26 @@ class StationsManager {
             } catch {
                 completion?(.failure(error))
             }
+        }
+    }
+
+    @MainActor
+    func loadMore(pageSize: Int) async {
+        guard !isLoadingMore, hasMoreStations else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+        do {
+            let newStations = try await NetworkService.fetchStations(limit: pageSize, offset: fetchOffset)
+            let unique = newStations.filter { new in !stations.contains(new) }
+            guard !unique.isEmpty else {
+                hasMoreStations = false
+                return
+            }
+            stations += unique
+            fetchOffset += newStations.count
+            hasMoreStations = newStations.count >= pageSize
+        } catch {
+            if Config.debugLog { print("StationsManager.loadMore: \(error)") }
         }
     }
     

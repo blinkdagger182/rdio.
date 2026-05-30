@@ -6,10 +6,12 @@ export default async function handler(request, response) {
   }
 
   try {
+    const limit = Math.min(50, Math.max(1, parseInt(request.query?.limit) || 20))
     const params = new URLSearchParams({
       hidebroken: 'true',
       order: 'stationcount',
-      reverse: 'true'
+      reverse: 'true',
+      limit: String(limit)
     })
     const countries = await fetchRadioBrowser('countries', params)
     sendJson(response, 200, { countries })

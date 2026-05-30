@@ -116,7 +116,14 @@ private extension BackendStation {
     }
 }
 
-// MARK: - GitHub Models
+// MARK: - Explore Metadata Models
+
+struct ExploreMetadataItem: Decodable {
+    let name: String
+    let stationcount: Int
+}
+
+// MARK: - NetworkService
 
 struct Contributor: Decodable {
     let login: String
@@ -143,14 +150,14 @@ struct NetworkService {
 
     // MARK: - Stations
 
-    static func fetchStations() async throws -> [RadioStation] {
+    static func fetchStations(limit: Int = Config.backendStationLimit, offset: Int = 0) async throws -> [RadioStation] {
         switch Config.stationsSource {
         case .bundledJSON, .remoteJSON:
             return try await fetchSwiftRadioStations()
         case .radioBrowser:
-            return try await fetchRadioBrowserStations()
+            return try await fetchRadioBrowserStations(limit: limit, offset: offset)
         case .backend:
-            return try await fetchBackendStations()
+            return try await fetchBackendStations(limit: limit, offset: offset)
         }
     }
 
@@ -344,6 +351,28 @@ struct NetworkService {
         default:
             return "search"
         }
+    }
+
+    // MARK: - Explore Metadata
+
+    static func fetchTags(limit: Int = 20) async throws -> [ExploreMetadataItem] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else { throw NetworkError.urlNotValid }
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/tags"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        guard let url = components?.url else { throw NetworkError.urlNotValid }
+        let response: [String: [ExploreMetadataItem]] = try await fetchJSON(url: url)
+        return response["tags"] ?? []
+    }
+
+    static func fetchCountries(limit: Int = 20) async throws -> [ExploreMetadataItem] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else { throw NetworkError.urlNotValid }
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/countries"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        guard let url = components?.url else { throw NetworkError.urlNotValid }
+        let response: [String: [ExploreMetadataItem]] = try await fetchJSON(url: url)
+        return response["countries"] ?? []
     }
 
     // MARK: - Images

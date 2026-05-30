@@ -106,11 +106,10 @@ private extension MainCoordinator {
         let home = RdioHomeViewController()
         let explore = RdioExploreViewController()
         let library = RdioLibraryViewController()
-        let search = RdioSearchViewController()
-        [home, explore, library, search].forEach { $0.experienceDelegate = self }
+        [home, explore, library].forEach { $0.experienceDelegate = self }
 
         let tabBar = RdioTabBarController()
-        tabBar.setViewControllers([home, explore, library, search], animated: false)
+        tabBar.setViewControllers([home, explore, library], animated: false)
         rdioTabBarController = tabBar
         return tabBar
     }
@@ -119,6 +118,16 @@ private extension MainCoordinator {
 extension MainCoordinator: RdioExperienceDelegate {
     func rdioDidSelectStation(_ station: RadioStation, from controller: UIViewController) {
         didSelectStation(station, from: StationsViewController())
+    }
+
+    func rdioDidStartPlayback(from controller: UIViewController) {
+        presentPopupBarIfNeeded()
+    }
+
+    func rdioDidRequestStationList(title: String, query: String, filter: String, from controller: UIViewController) {
+        let list = RdioStationListViewController(title: title, query: query, filter: filter)
+        list.experienceDelegate = self
+        navigationController.pushViewController(list, animated: true)
     }
 
     func rdioDidRequestNowPlaying(from controller: UIViewController) {

@@ -99,9 +99,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         library.tabTitle = "Library"
         library.tabImage = UIImage(systemName: "rectangle.stack.fill")
 
-        let searchTab = CPListTemplate(title: "Search", sections: [])
-        searchTab.tabTitle = "Search"
-        searchTab.tabImage = UIImage(systemName: "magnifyingglass")
+        let searchTab = CPListTemplate(title: "History", sections: [])
+        searchTab.tabTitle = "History"
+        searchTab.tabImage = UIImage(systemName: "clock.arrow.circlepath")
 
         homeTemplate = home
         exploreTemplate = explore
@@ -271,8 +271,10 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         if let s = safeSection(recent.prefix(10).map(makeStationItem(_:)), header: "recently played") { sections.append(s) }
 
         if let tags = exploreResponse?.featuredTags, !tags.isEmpty {
-            let genreItems = tags.prefix(8).map { tag -> CPListItem in
-                makeDrillDownItem(title: tag.name, subtitle: "\(tag.stationcount) stations", symbol: symbolImage(for: tag.name)) { [weak self] template in
+            let blocked: Set<String> = ["christian", "walm", "religion", "religious"]
+            let filtered = tags.filter { !blocked.contains($0.name.lowercased()) }
+            let genreItems = filtered.prefix(8).map { tag -> CPListItem in
+                makeDrillDownItem(title: tag.name.localizedCapitalized, subtitle: "\(tag.stationcount) stations", symbol: symbolImage(for: tag.name)) { [weak self] template in
                     Task {
                         do {
                             let results = try await NetworkService.searchStations(query: tag.name, filter: "tag")
@@ -287,13 +289,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 }
             }
             if let s = safeSection(genreItems, header: "browse by genre") { sections.append(s) }
-        } else {
-            let stations = StationsManager.shared.stations
-            let items = metadataItems(stations: stations, values: { $0.genreNames })
-                .prefix(8)
-                .map { makeCollectionItem(item: $0, stations: stations, filter: { $0.genreNames.contains($1) }) }
-            if let s = safeSection(items, header: "browse by genre") { sections.append(s) }
         }
+        // No fallback — local counts are inaccurate; wait for API data
 
         if let countries = exploreResponse?.featuredCountries, !countries.isEmpty {
             let countryItems = countries.prefix(8).map { country -> CPListItem in

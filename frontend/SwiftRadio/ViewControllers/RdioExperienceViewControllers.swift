@@ -755,8 +755,8 @@ final class RdioHomeViewController: RdioBaseViewController {
         ]
         RdioDesign.applyCardStyle(control, radius: 10)
         control.backgroundColor = colors[index % colors.count]
-        control.layer.borderColor = (highlighted ? Config.tintColor : RdioDesign.borderColor).cgColor
-        control.layer.borderWidth = highlighted ? 2 : 1
+        control.layer.borderColor = RdioDesign.borderColor.cgColor
+        control.layer.borderWidth = 1
         control.heightAnchor.constraint(equalToConstant: 82).isActive = true
         control.accessibilityLabel = "\(station.name), \(station.desc)"
         control.accessibilityTraits = .button
@@ -853,7 +853,7 @@ final class RdioHomeViewController: RdioBaseViewController {
     private func updateCategorySelection() {
         for button in categoryButtons {
             let selected = button.accessibilityLabel == selectedCategory
-            button.layer.borderColor = (selected ? Config.tintColor : RdioDesign.borderColor).cgColor
+            button.layer.borderColor = RdioDesign.borderColor.cgColor
             button.backgroundColor = selected ? Config.secondaryBackgroundColor : RdioDesign.cardColor
             button.subviews.compactMap { $0 as? UIImageView }.forEach {
                 $0.tintColor = selected ? Config.tintColor : Config.secondaryTextColor
@@ -1623,14 +1623,25 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
     }
 
     private func build() {
-        let header = UIStackView()
-        header.axis = .horizontal
-        header.alignment = .center
-        header.spacing = 12
+        let header = UIView()
+        header.translatesAutoresizingMaskIntoConstraints = false
+        header.heightAnchor.constraint(equalToConstant: 52).isActive = true
         let back = RdioDesign.iconButton("chevron.left", pointSize: 22)
+        back.translatesAutoresizingMaskIntoConstraints = false
         back.addTarget(self, action: #selector(backPressed), for: .touchUpInside)
-        header.addArrangedSubview(back)
-        header.addArrangedSubview(RdioDesign.title("search"))
+        let titleLabel = RdioDesign.title("search")
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(back)
+        header.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            back.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            back.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: back.trailingAnchor, constant: 8),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: header.trailingAnchor)
+        ])
         contentStack.addArrangedSubview(header)
 
         let searchRow = UIStackView()

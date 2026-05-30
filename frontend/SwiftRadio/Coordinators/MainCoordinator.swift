@@ -12,7 +12,7 @@ import SafariServices
 import LNPopupController
 import FRadioPlayer
 
-class MainCoordinator: NavigationCoordinator {
+class MainCoordinator: NSObject, NavigationCoordinator {
     var childCoordinators: [Coordinator] = []
     let navigationController: UINavigationController
 
@@ -34,6 +34,7 @@ class MainCoordinator: NavigationCoordinator {
 
     init(navigationController: UINavigationController) {
         self.navigationController = navigationController
+        self.navigationController.delegate = self
         self.navigationController.interactivePopGestureRecognizer?.isEnabled = true
         self.navigationController.interactivePopGestureRecognizer?.delegate = nil
     }
@@ -204,6 +205,20 @@ extension MainCoordinator: StationsViewControllerDelegate {
 
     func presentAbout(_ stationsViewController: StationsViewController) {
         openAbout()
+    }
+}
+
+// MARK: - UINavigationControllerDelegate
+
+extension MainCoordinator: UINavigationControllerDelegate {
+    func navigationController(_ navigationController: UINavigationController,
+                              didShow viewController: UIViewController,
+                              animated: Bool) {
+        // UIKit disables interactivePopGestureRecognizer when nav bar is hidden;
+        // re-enable after every push/pop so swipe-back always works.
+        let canPop = navigationController.viewControllers.count > 1
+        navigationController.interactivePopGestureRecognizer?.isEnabled = canPop
+        navigationController.interactivePopGestureRecognizer?.delegate = nil
     }
 }
 

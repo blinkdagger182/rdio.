@@ -1,6 +1,6 @@
 //
 //  CarPlaySceneDelegate.swift
-//  Swift Radio
+//  rdio.
 //
 //  Created by Fethi El Hassasna on 1/25/25.
 //  Copyright (c) 2015 MatthewFecher.com. All rights reserved.
@@ -29,6 +29,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                                   didConnect interfaceController: CPInterfaceController) {
         print("CarPlay connected")
         self.interfaceController = interfaceController
+        audioService.setupAudioSession()
+        audioService.activateAudioSession()
         configureNowPlayingTemplate()
 
         let templates = makeRootTemplates()
@@ -115,9 +117,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 completion()
                 return
             }
-            if StationsManager.shared.currentStation == nil {
-                StationsManager.shared.set(station: station)
-            }
+            self.play(station)
             self.interfaceController?.pushTemplate(CPNowPlayingTemplate.shared, animated: true, completion: nil)
             completion()
         }
@@ -192,12 +192,18 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         station.getImage { image in item.setImage(image) }
         item.handler = { [weak self] _, completion in
             print("Selected station: \(station.name)")
-            StationsManager.shared.set(station: station)
-            FRadioPlayer.shared.play()
+            self?.play(station)
             self?.interfaceController?.pushTemplate(CPNowPlayingTemplate.shared, animated: true, completion: nil)
             completion()
         }
         return item
+    }
+
+    private func play(_ station: RadioStation) {
+        audioService.activateAudioSession()
+        StationsManager.shared.set(station: station)
+        FRadioPlayer.shared.play()
+        updateTemplates()
     }
 
     private func symbolImage(for value: String) -> UIImage? {

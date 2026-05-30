@@ -1,4 +1,4 @@
-# Swift Radio
+# rdio.
 
 [![iOS build](https://github.com/analogcode/Swift-Radio-Pro/actions/workflows/ios.yml/badge.svg)](https://github.com/analogcode/Swift-Radio-Pro/actions/workflows/ios.yml)
 [![CarPlay build](https://github.com/analogcode/Swift-Radio-Pro/actions/workflows/carplay.yml/badge.svg)](https://github.com/analogcode/Swift-Radio-Pro/actions/workflows/carplay.yml)
@@ -6,10 +6,10 @@
 Open-source radio station app built entirely in Swift. Used by **80+ apps** on the App Store.
 
 <p align="center">
-    <img alt="Swift Radio" src="swift-radio-preview.png" width="700">
+    <img alt="rdio." src="swift-radio-preview.png" width="700">
 </p>
 
-**Looking for Android?** See [Swift Radio Android](https://github.com/fethica/Swift-Radio-Android). Same station format, native Kotlin and Jetpack Compose.
+**Looking for Android?** See [rdio. Android](https://github.com/fethica/Swift-Radio-Android). Same station format, native Kotlin and Jetpack Compose.
 
 ## Features
 
@@ -72,11 +72,11 @@ Looking for a simpler, single-station version? It skips the station list and lau
 
 [![Buy on Payhip](https://img.shields.io/badge/Buy-Single%20Station-blue)](https://payhip.com/b/x15QB)
 
-All proceeds go directly toward maintaining and improving Swift Radio.
+All proceeds go directly toward maintaining and improving rdio..
 
 For custom work or more advanced needs, reach out to [Fethi](mailto:contact@fethica.com).
 
-**Built something with Swift Radio?** We'd love to see it --drop us a line at [contact@fethica.com](mailto:contact@fethica.com).
+**Built something with rdio.?** We'd love to see it --drop us a line at [contact@fethica.com](mailto:contact@fethica.com).
 
 ## Credits
 
@@ -86,4 +86,4 @@ For custom work or more advanced needs, reach out to [Fethi](mailto:contact@feth
 
 ## License
 
-Swift Radio is open source and available under the [MIT License](LICENSE).
+rdio. is open source and available under the [MIT License](LICENSE).

@@ -34,6 +34,8 @@ class MainCoordinator: NavigationCoordinator {
 
     init(navigationController: UINavigationController) {
         self.navigationController = navigationController
+        self.navigationController.interactivePopGestureRecognizer?.isEnabled = true
+        self.navigationController.interactivePopGestureRecognizer?.delegate = nil
     }
 
     // MARK: - Popup Bar
@@ -117,7 +119,18 @@ private extension MainCoordinator {
 
 extension MainCoordinator: RdioExperienceDelegate {
     func rdioDidSelectStation(_ station: RadioStation, from controller: UIViewController) {
-        didSelectStation(station, from: StationsViewController())
+        let isNewStation = station != StationsManager.shared.currentStation
+        if isNewStation {
+            StationsManager.shared.set(station: station)
+            StationStore.shared.recordPlay(station)
+            player.play()
+            presentPopupBarIfNeeded()
+        } else if player.isPlaying {
+            popupContainer.openPopup(animated: true)
+        } else {
+            player.togglePlaying()
+            presentPopupBarIfNeeded()
+        }
     }
 
     func rdioDidStartPlayback(from controller: UIViewController) {
@@ -128,6 +141,20 @@ extension MainCoordinator: RdioExperienceDelegate {
         let list = RdioStationListViewController(title: title, query: query, filter: filter)
         list.experienceDelegate = self
         navigationController.pushViewController(list, animated: true)
+    }
+
+    func rdioDidRequestCountryList(from controller: UIViewController) {
+        let list = RdioCountryListViewController()
+        list.experienceDelegate = self
+        navigationController.pushViewController(list, animated: true)
+    }
+
+    func rdioDidRequestSearch(query: String, filter: String, from controller: UIViewController) {
+        let search = RdioSearchViewController()
+        search.experienceDelegate = self
+        search.loadViewIfNeeded()
+        search.apply(query: query, filter: filter)
+        navigationController.pushViewController(search, animated: true)
     }
 
     func rdioDidRequestNowPlaying(from controller: UIViewController) {
@@ -161,6 +188,7 @@ extension MainCoordinator: StationsViewControllerDelegate {
         let isNewStation = station != StationsManager.shared.currentStation
         if isNewStation {
             StationsManager.shared.set(station: station)
+            StationStore.shared.recordPlay(station)
             player.play()
             presentPopupBarIfNeeded()
         } else if player.isPlaying {

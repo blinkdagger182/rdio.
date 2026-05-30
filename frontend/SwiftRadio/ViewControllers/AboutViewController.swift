@@ -1,6 +1,6 @@
 //
 //  AboutViewController.swift
-//  Swift Radio
+//  rdio.
 //
 //  Created by Matthew Fecher on 7/9/15.
 //  Copyright (c) 2015 MatthewFecher.com. All rights reserved.
@@ -61,7 +61,7 @@ class AboutViewController: UITableViewController {
 
     // MARK: - Setup: Header
 
-    /// Creates a custom header with a bold title and descriptive text about Swift Radio.
+    /// Creates a custom header with a bold title and descriptive text about rdio..
     private func setupTableHeaderView() {
         let headerView = UIView()
 

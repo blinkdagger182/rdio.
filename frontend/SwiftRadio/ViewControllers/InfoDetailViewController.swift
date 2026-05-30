@@ -1,6 +1,6 @@
 //
 //  InfoDetailViewController.swift
-//  Swift Radio
+//  rdio.
 //
 //  Created by Matthew Fecher on 7/9/15.
 //  Copyright (c) 2015 MatthewFecher.com. All rights reserved.

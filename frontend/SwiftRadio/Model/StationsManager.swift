@@ -36,7 +36,9 @@ class StationsManager {
             notifiyObservers { observer in
                 observer.stationsManager(self, stationDidChange: currentStation)
             }
-            
+            if let station = currentStation {
+                StationStore.shared.recordPlay(station)
+            }
             resetArtwork(with: currentStation)
         }
     }
@@ -179,6 +181,8 @@ extension StationsManager {
             updateLockScreen(with: nil)
             return
         }
+
+        updateLockScreen(with: nil)
         
         station.getImage { [weak self] image in
             self?.updateLockScreen(with: image)
@@ -196,12 +200,17 @@ extension StationsManager {
             })
         }
         
-        if let artistName = currentStation?.artistName {
-            nowPlayingInfo[MPMediaItemPropertyArtist] = artistName
+        if let station = currentStation {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = station.name
+            nowPlayingInfo[MPMediaItemPropertyArtist] = station.desc
         }
         
-        if let trackName = currentStation?.trackName {
+        if let trackName = player.currentMetadata?.trackName, !trackName.isEmpty {
             nowPlayingInfo[MPMediaItemPropertyTitle] = trackName
+        }
+
+        if let artistName = player.currentMetadata?.artistName, !artistName.isEmpty {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = artistName
         }
         
         let isLive = player.duration == 0

@@ -1,6 +1,6 @@
 //
 //  InfoSection.swift
-//  Swift Radio
+//  rdio.
 //
 //  Created by Fethi El Hassasna on 2025-01-26.
 //  Copyright © 2025 matthewfecher.com. All rights reserved.

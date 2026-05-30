@@ -116,11 +116,30 @@ private extension BackendStation {
     }
 }
 
-// MARK: - Explore Metadata Models
+// MARK: - Explore Models
 
 struct ExploreMetadataItem: Decodable {
     let name: String
     let stationcount: Int
+}
+
+struct ExploreCountry: Decodable {
+    let code: String
+    let name: String
+    let stationcount: Int
+}
+
+struct ExploreRegion: Decodable {
+    let name: String
+    let codes: [String]
+    let stationcount: Int
+}
+
+struct ExploreResponse: Decodable {
+    let localCountries: [ExploreCountry]
+    let featuredCountries: [ExploreCountry]
+    let regions: [ExploreRegion]
+    let featuredTags: [ExploreMetadataItem]
 }
 
 // MARK: - NetworkService
@@ -342,6 +361,8 @@ struct NetworkService {
 
     private static func backendFilterKey(for filter: String?) -> String {
         switch filter?.lowercased() {
+        case "countrycode", "countrycodes":
+            return "countrycode"
         case "countries", "country":
             return "country"
         case "language", "languages":
@@ -373,6 +394,48 @@ struct NetworkService {
         guard let url = components?.url else { throw NetworkError.urlNotValid }
         let response: [String: [ExploreMetadataItem]] = try await fetchJSON(url: url)
         return response["countries"] ?? []
+    }
+
+    static func fetchExplore() async throws -> ExploreResponse {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString),
+              let url = URL(string: baseURL.appendingPathComponent("api/explore").absoluteString) else {
+            throw NetworkError.urlNotValid
+        }
+        return try await fetchJSON(url: url)
+    }
+
+    static func fetchTrending(limit: Int = 20) async throws -> [RadioStation] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else { throw NetworkError.urlNotValid }
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/trending"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        guard let url = components?.url else { throw NetworkError.urlNotValid }
+        let response: BackendStationsResponse = try await fetchJSON(url: url)
+        return response.stations.compactMap(\.radioStation)
+    }
+
+    static func fetchPopular(limit: Int = 20) async throws -> [RadioStation] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else { throw NetworkError.urlNotValid }
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/popular"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        guard let url = components?.url else { throw NetworkError.urlNotValid }
+        let response: BackendStationsResponse = try await fetchJSON(url: url)
+        return response.stations.compactMap(\.radioStation)
+    }
+
+    static func fetchFeatured(countryCode: String = "MY", limit: Int = 8) async throws -> [RadioStation] {
+        guard let baseURLString = Config.backendBaseURL,
+              let baseURL = URL(string: baseURLString) else { throw NetworkError.urlNotValid }
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/featured"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "countrycode", value: countryCode.uppercased()),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+        guard let url = components?.url else { throw NetworkError.urlNotValid }
+        let response: BackendStationsResponse = try await fetchJSON(url: url)
+        return response.stations.compactMap(\.radioStation)
     }
 
     // MARK: - Images

@@ -51,7 +51,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swift Radio"
+            "value" : "rdio."
           }
         }
       }
@@ -150,7 +150,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "**Swift Radio** is a fully featured, open-source radio station app written entirely in **Swift**. It provides robust, professional functionality out of the box, complete with **Apple CarPlay** support, making it the perfect foundation for **building** or **customizing** your own streaming radio experience."
+            "value" : "**rdio.** is a fully featured, open-source radio station app written entirely in **Swift**. It provides robust, professional functionality out of the box, complete with **Apple CarPlay** support, making it the perfect foundation for **building** or **customizing** your own streaming radio experience."
           }
         }
       }
@@ -249,7 +249,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check out Swift Radio!"
+            "value" : "Check out rdio.!"
           }
         }
       }
@@ -260,7 +260,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "About Swift Radio"
+            "value" : "About rdio."
           }
         }
       }
@@ -590,7 +590,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You are listening to Swift Radio. This is a sweet open source project. Tell your friends, swiftly!"
+            "value" : "You are listening to rdio.. This is a sweet open source project. Tell your friends, swiftly!"
           }
         }
       }
@@ -634,7 +634,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swift Radio"
+            "value" : "rdio."
           }
         }
       }

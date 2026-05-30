@@ -1,6 +1,6 @@
 //
 //  SceneDelegate.swift
-//  Swift Radio
+//  rdio.
 //
 //  Created by Fethi El Hassasna on 1/25/25.
 //  Copyright (c) 2015 MatthewFecher.com. All rights reserved.

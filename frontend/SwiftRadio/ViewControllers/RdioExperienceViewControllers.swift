@@ -14,6 +14,8 @@ protocol RdioExperienceDelegate: AnyObject {
     func rdioDidSelectStation(_ station: RadioStation, from controller: UIViewController)
     func rdioDidStartPlayback(from controller: UIViewController)
     func rdioDidRequestStationList(title: String, query: String, filter: String, from controller: UIViewController)
+    func rdioDidRequestCountryList(from controller: UIViewController)
+    func rdioDidRequestSearch(query: String, filter: String, from controller: UIViewController)
     func rdioDidRequestNowPlaying(from controller: UIViewController)
     func rdioDidRequestPlaybackOptions(from controller: UIViewController)
     func rdioDidRequestAbout(from controller: UIViewController)
@@ -111,6 +113,21 @@ private struct RdioLibraryCollection {
     let title: String
     let icon: String
     let stations: [RadioStation]
+    let query: String
+    let filter: String
+
+    init(title: String, icon: String, stations: [RadioStation]) {
+        self.title = title; self.icon = icon
+        self.stations = stations; self.query = ""; self.filter = "Stations"
+    }
+
+    init(title: String, icon: String, query: String, filter: String) {
+        self.title = title; self.icon = icon
+        self.stations = []; self.query = query; self.filter = filter
+    }
+
+    var subtitle: String { stations.isEmpty ? "live results" : "\(stations.count) stations" }
+    var isServerBacked: Bool { stations.isEmpty }
 }
 
 final class RdioTabBarController: UITabBarController {
@@ -239,17 +256,20 @@ class RdioBaseViewController: BaseController {
 
     let scrollView = UIScrollView()
     let contentStack = UIStackView()
+    private(set) var contentStackTopConstraint: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Config.backgroundColor
         manager.addObserver(self)
         player.addObserver(self)
+        NotificationCenter.default.addObserver(self, selector: #selector(storeChanged), name: .stationStoreDidChange, object: nil)
     }
 
     deinit {
         manager.removeObserver(self)
         player.removeObserver(self)
+        NotificationCenter.default.removeObserver(self, name: .stationStoreDidChange, object: nil)
     }
 
     override func setupViews() {
@@ -271,7 +291,7 @@ class RdioBaseViewController: BaseController {
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 0),
+            { let c = contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 0); contentStackTopConstraint = c; return c }(),
             contentStack.centerXAnchor.constraint(equalTo: scrollView.frameLayoutGuide.centerXAnchor),
             contentStack.leadingAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.leadingAnchor, constant: RdioDesign.horizontalInset),
             contentStack.trailingAnchor.constraint(lessThanOrEqualTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -RdioDesign.horizontalInset),
@@ -286,6 +306,10 @@ class RdioBaseViewController: BaseController {
     }
 
     func reloadContent() {}
+
+    @objc private func storeChanged() {
+        reloadContent()
+    }
 }
 
 extension RdioBaseViewController: StationsManagerObserver, FRadioPlayerObserver {
@@ -339,6 +363,10 @@ final class RdioStationListViewController: UIViewController {
         v.color = Config.tintColor
         return v
     }()
+    private lazy var nowPlayingDock = RdioNowPlayingDockView { [weak self] in
+        guard let self else { return }
+        self.experienceDelegate?.rdioDidRequestNowPlaying(from: self)
+    }
 
     init(title: String, query: String, filter: String) {
         self.pageTitle = title
@@ -362,6 +390,15 @@ final class RdioStationListViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = Config.backgroundColor
         buildLayout()
+        StationsManager.shared.addObserver(self)
+        FRadioPlayer.shared.addObserver(self)
+        NotificationCenter.default.addObserver(self, selector: #selector(storeChanged), name: .stationStoreDidChange, object: nil)
+    }
+
+    deinit {
+        StationsManager.shared.removeObserver(self)
+        FRadioPlayer.shared.removeObserver(self)
+        NotificationCenter.default.removeObserver(self, name: .stationStoreDidChange, object: nil)
     }
 
     override func viewDidLayoutSubviews() {
@@ -397,6 +434,7 @@ final class RdioStationListViewController: UIViewController {
 
         view.addSubview(header)
         view.addSubview(tableView)
+        view.addSubview(nowPlayingDock)
         tableView.tableFooterView = footerSpinner
 
         NSLayoutConstraint.activate([
@@ -413,8 +451,12 @@ final class RdioStationListViewController: UIViewController {
             tableView.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            nowPlayingDock.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 18),
+            nowPlayingDock.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -18),
+            nowPlayingDock.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
         ])
+        nowPlayingDock.refresh()
     }
 
     private func loadNextPage() {
@@ -439,12 +481,17 @@ final class RdioStationListViewController: UIViewController {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let new = try await NetworkService.searchStations(
-                    query: q.isEmpty ? nil : q,
-                    filter: f,
-                    limit: currentPageSize,
-                    offset: currentOffset
-                )
+                let new: [RadioStation]
+                if f == "Trending" {
+                    new = try await NetworkService.fetchTrending(limit: min(currentPageSize, 50))
+                } else {
+                    new = try await NetworkService.searchStations(
+                        query: q.isEmpty ? nil : q,
+                        filter: f,
+                        limit: currentPageSize,
+                        offset: currentOffset
+                    )
+                }
                 await MainActor.run { self.appendPage(new) }
             } catch {
                 await MainActor.run {
@@ -474,6 +521,25 @@ final class RdioStationListViewController: UIViewController {
 
     @objc private func backPressed() {
         navigationController?.popViewController(animated: true)
+    }
+
+    @objc private func storeChanged() {
+        tableView.reloadData()
+        nowPlayingDock.refresh()
+    }
+}
+
+extension RdioStationListViewController: StationsManagerObserver, FRadioPlayerObserver {
+    func stationsManager(_ manager: StationsManager, stationsDidUpdate stations: [RadioStation]) {}
+
+    func stationsManager(_ manager: StationsManager, stationDidChange station: RadioStation?) {
+        nowPlayingDock.refresh()
+        tableView.reloadData()
+    }
+
+    func radioPlayer(_ player: FRadioPlayer, playbackStateDidChange state: FRadioPlayer.PlaybackState) {
+        nowPlayingDock.refresh()
+        tableView.reloadData()
     }
 }
 
@@ -523,12 +589,24 @@ final class RdioHomeViewController: RdioBaseViewController {
     private let recentStack = UIStackView()
     private var selectedCategory = "music"
     private var categoryButtons: [UIButton] = []
+    private var featuredStations: [RadioStation] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
         tabBarItem = UITabBarItem(title: "home", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"))
         build()
         reloadContent()
+        Task { await loadFeatured() }
+    }
+
+    @MainActor
+    private func loadFeatured() async {
+        do {
+            featuredStations = try await NetworkService.fetchFeatured(countryCode: "MY", limit: 8)
+            reloadContent()
+        } catch {
+            if Config.debugLog { print("Home featured: \(error)") }
+        }
     }
 
     private func build() {
@@ -540,10 +618,13 @@ final class RdioHomeViewController: RdioBaseViewController {
         let logo = RdioDesign.title("rdio.", size: 34)
         let buttons = UIStackView()
         buttons.spacing = 18
+        let search = RdioDesign.iconButton("magnifyingglass")
+        search.addTarget(self, action: #selector(searchPressed), for: .touchUpInside)
         let route = RdioDesign.iconButton("airplayaudio")
         route.addTarget(self, action: #selector(nowPlaying), for: .touchUpInside)
         let settings = RdioDesign.iconButton("gearshape")
         settings.addTarget(self, action: #selector(playbackOptions), for: .touchUpInside)
+        buttons.addArrangedSubview(search)
         buttons.addArrangedSubview(route)
         buttons.addArrangedSubview(settings)
         header.addArrangedSubview(logo)
@@ -647,16 +728,19 @@ final class RdioHomeViewController: RdioBaseViewController {
         updatePlayButton()
 
         featuredStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        Array(stations.prefix(4)).enumerated().forEach { index, station in
-            featuredStack.addArrangedSubview(featuredTile(station: station, index: index, highlighted: index == 2))
+        let featured = featuredStations.isEmpty ? Array(stations.prefix(4)) : Array(featuredStations.prefix(4))
+        featured.enumerated().forEach { index, s in
+            featuredStack.addArrangedSubview(featuredTile(station: s, index: index, highlighted: index == 2))
         }
 
         recentStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let filtered = filteredStations(for: selectedCategory)
-        if let recent = filtered.dropFirst().first ?? filtered.first {
-            recentStack.addArrangedSubview(stationRow(station: recent, compact: false))
+        let recent = StationStore.shared.recentlyPlayed
+        if recent.isEmpty {
+            recentStack.addArrangedSubview(RdioDesign.emptyState("Play a station to see it here."))
         } else {
-            recentStack.addArrangedSubview(RdioDesign.emptyState("No matching live stations."))
+            recent.prefix(3).forEach { s in
+                recentStack.addArrangedSubview(stationRow(station: s, compact: false))
+            }
         }
         updateCategorySelection()
     }
@@ -744,7 +828,7 @@ final class RdioHomeViewController: RdioBaseViewController {
     }
 
     private func stationRow(station: RadioStation, compact: Bool) -> UIView {
-        RdioStationRow(station: station, showsHeart: false) { [weak self] in
+        RdioStationRow(station: station, showsHeart: true) { [weak self] in
             guard let self else { return }
             self.experienceDelegate?.rdioDidSelectStation(station, from: self)
         }
@@ -805,6 +889,10 @@ final class RdioHomeViewController: RdioBaseViewController {
         experienceDelegate?.rdioDidRequestNowPlaying(from: self)
     }
 
+    @objc private func searchPressed() {
+        experienceDelegate?.rdioDidRequestSearch(query: "", filter: "All", from: self)
+    }
+
     @objc private func playPressed() {
         if player.isPlaying {
             player.stop()
@@ -813,6 +901,7 @@ final class RdioHomeViewController: RdioBaseViewController {
             if manager.currentStation != station {
                 manager.set(station: station)
             }
+            StationStore.shared.recordPlay(station)
             player.play()
             experienceDelegate?.rdioDidStartPlayback(from: self)
             reloadContent()
@@ -836,25 +925,61 @@ final class RdioHomeViewController: RdioBaseViewController {
 }
 
 final class RdioExploreViewController: RdioBaseViewController {
-    private enum MetadataKind {
-        case genre
-        case country
-        case region
-    }
-
-    private let exploreTabs = ["for you", "genres", "countries", "regions"]
-    private var selectedExploreTab = "countries"
-    private var tabButtons: [UIButton] = []
     private let listStack = UIStackView()
-    private var miniPlayerView: RdioMiniPlayerView?
-    private var fetchedTags: [RdioMetadataItem] = []
-    private var fetchedCountries: [RdioMetadataItem] = []
+    private var exploreData: ExploreResponse?
+    private var globeView: RdioGlobeView?
+    private let globeHeight: CGFloat = 290
 
     override func viewDidLoad() {
         super.viewDidLoad()
         tabBarItem = UITabBarItem(title: "explore", image: UIImage(systemName: "safari"), selectedImage: UIImage(systemName: "safari.fill"))
         build()
-        Task { await loadExploreMetadata() }
+        Task { await loadExplore() }
+    }
+
+    override func setupViews() {
+        super.setupViews()
+
+        // Full-width globe hero above contentStack
+        let globe = RdioGlobeView()
+        globe.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(globe)
+
+        contentStackTopConstraint?.isActive = false
+        NSLayoutConstraint.activate([
+            globe.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            globe.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor),
+            globe.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor),
+            globe.heightAnchor.constraint(equalToConstant: globeHeight),
+            contentStack.topAnchor.constraint(equalTo: globe.bottomAnchor, constant: 20)
+        ])
+
+        globe.onSelect = { [weak self] country in
+            guard let self else { return }
+            self.experienceDelegate?.rdioDidRequestStationList(
+                title: country.name, query: country.code, filter: "countrycode", from: self
+            )
+        }
+
+        globeView = globe
+    }
+
+    @MainActor
+    private func loadExplore() async {
+        do {
+            exploreData = try await NetworkService.fetchExplore()
+            reloadContent()
+            // Combine local + featured into globe pins (deduplicated)
+            if let data = exploreData {
+                var seen = Set<String>()
+                let allCountries = (data.localCountries + data.featuredCountries).filter {
+                    seen.insert($0.code).inserted
+                }
+                globeView?.configure(with: allCountries)
+            }
+        } catch {
+            if Config.debugLog { print("Explore load: \(error)") }
+        }
     }
 
     private func build() {
@@ -862,199 +987,252 @@ final class RdioExploreViewController: RdioBaseViewController {
         header.axis = .horizontal
         header.distribution = .equalSpacing
         header.addArrangedSubview(RdioDesign.title("explore"))
+        let actions = UIStackView()
+        actions.spacing = 14
+        let search = RdioDesign.iconButton("magnifyingglass")
+        search.addTarget(self, action: #selector(searchPressed), for: .touchUpInside)
         let bell = RdioDesign.iconButton("bell")
         bell.addTarget(self, action: #selector(aboutPressed), for: .touchUpInside)
-        header.addArrangedSubview(bell)
+        actions.addArrangedSubview(search)
+        actions.addArrangedSubview(bell)
+        header.addArrangedSubview(actions)
         contentStack.addArrangedSubview(header)
 
-        let tabs = UIStackView()
-        tabs.axis = .horizontal
-        tabs.distribution = .fillEqually
-        exploreTabs.forEach { title in
-            let button = UIButton(type: .system)
-            button.setTitle(title, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 19, weight: .semibold)
-            button.addAction(UIAction { [weak self] _ in
-                self?.selectedExploreTab = title
-                self?.reloadContent()
-            }, for: .touchUpInside)
-            tabButtons.append(button)
-            tabs.addArrangedSubview(button)
-        }
-        contentStack.addArrangedSubview(tabs)
-
         listStack.axis = .vertical
-        listStack.spacing = 14
+        listStack.spacing = 16
         contentStack.addArrangedSubview(listStack)
-
-        if let station = manager.currentStation ?? stations.first {
-            let mini = RdioMiniPlayerView(station: station) { [weak self] in
-                guard let self else { return }
-                self.experienceDelegate?.rdioDidRequestNowPlaying(from: self)
-            }
-            miniPlayerView = mini
-            contentStack.addArrangedSubview(mini)
-        }
         reloadContent()
     }
 
     override func reloadContent() {
-        updateTabs()
         listStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-
-        switch selectedExploreTab {
-        case "genres":
-            listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "popular genres", action: UIAction { [weak self] _ in
-                self?.openSearch(query: "", filter: "Genres")
-            }))
-            metadataItems(kind: .genre).enumerated().forEach { index, item in
-                listStack.addArrangedSubview(cityCard(name: item.name, count: "\(item.count) stations", index: index, filter: "Genres"))
-            }
-        case "countries":
-            listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "countries", action: UIAction { [weak self] _ in
-                self?.openSearch(query: "", filter: "Countries")
-            }))
-            metadataItems(kind: .country).enumerated().forEach { index, item in
-                listStack.addArrangedSubview(cityCard(name: item.name, count: "\(item.count) stations", index: index, filter: "Countries"))
-            }
-        case "for you":
-            listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "for you", action: UIAction { [weak self] _ in
-                self?.openSearch(query: "", filter: "Stations")
-            }))
-            Array(stations.prefix(8)).forEach { station in
-                listStack.addArrangedSubview(RdioStationRow(station: station, showsHeart: false) { [weak self] in
-                    guard let self else { return }
-                    self.experienceDelegate?.rdioDidSelectStation(station, from: self)
-                })
-            }
-        default:
-            listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "regions", action: UIAction { [weak self] _ in
-                self?.openSearch(query: "", filter: "Stations")
-            }))
-            metadataItems(kind: .region).enumerated().forEach { index, item in
-                listStack.addArrangedSubview(cityCard(name: item.name, count: "\(item.count) stations", index: index, filter: "Regions"))
-            }
+        guard let data = exploreData else {
+            listStack.addArrangedSubview(RdioDesign.emptyState("Loading explore data…"))
+            return
         }
 
-        if listStack.arrangedSubviews.count == 1 {
-            listStack.addArrangedSubview(RdioDesign.emptyState("No live station data for this view yet."))
+        // Local stations
+        listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "local stations", action: UIAction { [weak self] _ in
+            self?.navigate(title: "Local", query: "", filter: "Countries")
+        }))
+        let localCard = UIStackView()
+        localCard.axis = .vertical; localCard.spacing = 0
+        RdioDesign.applyCardStyle(localCard, radius: 14)
+        data.localCountries.enumerated().forEach { idx, country in
+            localCard.addArrangedSubview(countryRow(country))
+            if idx < data.localCountries.count - 1 { localCard.addArrangedSubview(divider()) }
         }
+        listStack.addArrangedSubview(localCard)
+
+        // Genres
+        listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "genres", action: UIAction { [weak self] _ in
+            self?.navigate(title: "Genres", query: "", filter: "Genres")
+        }))
+        listStack.addArrangedSubview(genreGrid(data.featuredTags))
+
+        // Regions
+        listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "regions", action: nil))
+        listStack.addArrangedSubview(regionGrid(data.regions))
+
+        // Popular countries
+        listStack.addArrangedSubview(RdioDesign.sectionHeader(title: "popular countries", action: UIAction { [weak self] _ in
+            guard let self else { return }
+            self.experienceDelegate?.rdioDidRequestCountryList(from: self)
+        }))
+        let countriesCard = UIStackView()
+        countriesCard.axis = .vertical; countriesCard.spacing = 0
+        RdioDesign.applyCardStyle(countriesCard, radius: 14)
+        data.featuredCountries.enumerated().forEach { idx, country in
+            countriesCard.addArrangedSubview(countryRow(country))
+            if idx < data.featuredCountries.count - 1 { countriesCard.addArrangedSubview(divider()) }
+        }
+        listStack.addArrangedSubview(countriesCard)
     }
 
-    private func cityCard(name: String, count: String, index: Int, filter: String) -> UIView {
-        let view = UIControl()
-        let colors = [
+    private func countryRow(_ country: ExploreCountry) -> UIView {
+        let control = UIControl()
+        control.heightAnchor.constraint(equalToConstant: 58).isActive = true
+        control.addAction(UIAction { [weak self] _ in
+            self?.navigate(title: country.name, query: country.code, filter: "countrycode")
+        }, for: .touchUpInside)
+        control.accessibilityLabel = "\(country.name), \(country.stationcount) stations"
+        control.accessibilityTraits = .button
+
+        let flag = UILabel()
+        flag.text = flagEmoji(country.code)
+        flag.font = .systemFont(ofSize: 26)
+        flag.translatesAutoresizingMaskIntoConstraints = false
+
+        let name = RdioDesign.title(country.name, size: 17)
+        name.numberOfLines = 1
+        name.translatesAutoresizingMaskIntoConstraints = false
+
+        let count = RdioDesign.secondary(countLabel(country.stationcount), size: 14)
+        count.translatesAutoresizingMaskIntoConstraints = false
+
+        let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
+        chevron.tintColor = Config.tertiaryTextColor
+        chevron.contentMode = .scaleAspectFit
+        chevron.translatesAutoresizingMaskIntoConstraints = false
+
+        [flag, name, count, chevron].forEach { control.addSubview($0) }
+        NSLayoutConstraint.activate([
+            flag.leadingAnchor.constraint(equalTo: control.leadingAnchor, constant: 18),
+            flag.centerYAnchor.constraint(equalTo: control.centerYAnchor),
+            flag.widthAnchor.constraint(equalToConstant: 32),
+            name.leadingAnchor.constraint(equalTo: flag.trailingAnchor, constant: 12),
+            name.centerYAnchor.constraint(equalTo: control.centerYAnchor, constant: -9),
+            count.leadingAnchor.constraint(equalTo: name.leadingAnchor),
+            count.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 2),
+            chevron.trailingAnchor.constraint(equalTo: control.trailingAnchor, constant: -18),
+            chevron.centerYAnchor.constraint(equalTo: control.centerYAnchor),
+            chevron.widthAnchor.constraint(equalToConstant: 12),
+            chevron.heightAnchor.constraint(equalToConstant: 14)
+        ])
+        return control
+    }
+
+    private func genreGrid(_ tags: [ExploreMetadataItem]) -> UIView {
+        let outer = UIStackView()
+        outer.axis = .vertical
+        outer.spacing = 10
+        let cols = 4
+        var row: UIStackView?
+        tags.enumerated().forEach { idx, tag in
+            if idx % cols == 0 {
+                let r = UIStackView()
+                r.axis = .horizontal
+                r.spacing = 10
+                r.distribution = .fillEqually
+                outer.addArrangedSubview(r)
+                row = r
+            }
+            row?.addArrangedSubview(genrePill(tag))
+        }
+        // pad last row
+        if let last = outer.arrangedSubviews.last as? UIStackView {
+            let rem = cols - last.arrangedSubviews.count
+            (0..<rem).forEach { _ in last.addArrangedSubview(UIView()) }
+        }
+        return outer
+    }
+
+    private func genrePill(_ tag: ExploreMetadataItem) -> UIView {
+        let button = UIButton(type: .system)
+        button.heightAnchor.constraint(equalToConstant: 66).isActive = true
+        RdioDesign.applyCardStyle(button, radius: 12)
+        button.addAction(UIAction { [weak self] _ in
+            self?.navigate(title: tag.name.localizedCapitalized, query: tag.name, filter: "Genres")
+        }, for: .touchUpInside)
+        button.accessibilityLabel = "\(tag.name), \(tag.stationcount) stations"
+
+        let name = RdioDesign.title(tag.name.localizedCapitalized, size: 14)
+        name.numberOfLines = 2
+        name.textAlignment = .center
+        name.adjustsFontSizeToFitWidth = true
+        name.minimumScaleFactor = 0.8
+        name.isUserInteractionEnabled = false
+        name.translatesAutoresizingMaskIntoConstraints = false
+
+        let count = RdioDesign.secondary(countLabel(tag.stationcount), size: 11)
+        count.textAlignment = .center
+        count.isUserInteractionEnabled = false
+        count.translatesAutoresizingMaskIntoConstraints = false
+
+        button.addSubview(name)
+        button.addSubview(count)
+        NSLayoutConstraint.activate([
+            name.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 6),
+            name.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -6),
+            name.centerYAnchor.constraint(equalTo: button.centerYAnchor, constant: -8),
+            count.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            count.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 3)
+        ])
+        return button
+    }
+
+    private func regionGrid(_ regions: [ExploreRegion]) -> UIView {
+        let outer = UIStackView()
+        outer.axis = .vertical
+        outer.spacing = 10
+        let cols = 2
+        let colors: [UIColor] = [
             UIColor(red: 0.18, green: 0.12, blue: 0.25, alpha: 1),
             UIColor(red: 0.10, green: 0.16, blue: 0.20, alpha: 1),
             UIColor(red: 0.18, green: 0.13, blue: 0.09, alpha: 1),
             UIColor(red: 0.08, green: 0.18, blue: 0.15, alpha: 1),
-            UIColor(red: 0.18, green: 0.10, blue: 0.14, alpha: 1)
+            UIColor(red: 0.18, green: 0.10, blue: 0.14, alpha: 1),
+            UIColor(red: 0.10, green: 0.12, blue: 0.20, alpha: 1),
+            UIColor(red: 0.14, green: 0.18, blue: 0.10, alpha: 1),
         ]
-        view.backgroundColor = colors[index % colors.count]
-        view.layer.cornerRadius = 18
-        view.clipsToBounds = true
-        view.heightAnchor.constraint(equalToConstant: 84).isActive = true
-        view.addAction(UIAction { [weak self] _ in
-            self?.openSearch(query: name, filter: filter)
-        }, for: .touchUpInside)
-
-        let title = RdioDesign.title(name, size: 23)
-        let subtitle = RdioDesign.secondary(count, size: 17)
-        let bars = RdioCityBarsView()
-        bars.backgroundColor = .clear
-        bars.isOpaque = false
-        [title, subtitle, bars].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview($0)
-        }
-        NSLayoutConstraint.activate([
-            title.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 22),
-            title.topAnchor.constraint(equalTo: view.topAnchor, constant: 18),
-            subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor),
-            subtitle.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 4),
-            bars.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
-            bars.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            bars.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.58),
-            bars.heightAnchor.constraint(equalToConstant: 62)
-        ])
-        return view
-    }
-
-    private func updateTabs() {
-        tabButtons.forEach { button in
-            let selected = button.title(for: .normal) == selectedExploreTab
-            button.tintColor = selected ? Config.primaryTextColor : Config.tertiaryTextColor
-            button.titleLabel?.font = .systemFont(ofSize: 19, weight: selected ? .bold : .semibold)
-        }
-    }
-
-    private func filteredStations(query: String) -> [RadioStation] {
-        stations.filter { $0.matches(query) }
-    }
-
-    @MainActor
-    private func loadExploreMetadata() async {
-        async let tags = NetworkService.fetchTags(limit: 20)
-        async let countries = NetworkService.fetchCountries(limit: 20)
-        do {
-            let (t, c) = try await (tags, countries)
-            let skipTags = ["radio", "fm", "am", "estación", "norteamérica", "entretenimiento"]
-            fetchedTags = t
-                .filter { !skipTags.contains($0.name.lowercased()) }
-                .prefix(8)
-                .map { RdioMetadataItem(name: $0.name.localizedCapitalized, count: $0.stationcount) }
-            fetchedCountries = c
-                .prefix(8)
-                .map { RdioMetadataItem(name: shortCountryName($0.name), count: $0.stationcount) }
-            reloadContent()
-        } catch {
-            if Config.debugLog { print("Explore metadata fetch: \(error)") }
-        }
-    }
-
-    private func shortCountryName(_ name: String) -> String {
-        name
-            .replacingOccurrences(of: "The ", with: "")
-            .replacingOccurrences(of: " Of Great Britain And Northern Ireland", with: "")
-            .replacingOccurrences(of: " Of America", with: "")
-            .replacingOccurrences(of: " Federation", with: "")
-            .replacingOccurrences(of: "United Kingdom", with: "UK")
-            .replacingOccurrences(of: "United States", with: "USA")
-    }
-
-    private func metadataItems(kind: MetadataKind) -> [RdioMetadataItem] {
-        switch kind {
-        case .genre where !fetchedTags.isEmpty:
-            return fetchedTags
-        case .country where !fetchedCountries.isEmpty:
-            return fetchedCountries
-        default:
-            break
-        }
-
-        var counts: [String: Int] = [:]
-        stations.forEach { station in
-            let values: [String]
-            switch kind {
-            case .genre:  values = station.genreNames
-            case .country: values = station.countryName.map { [$0] } ?? []
-            case .region:  values = station.regionName.map { [$0] } ?? []
+        var row: UIStackView?
+        regions.enumerated().forEach { idx, region in
+            if idx % cols == 0 {
+                let r = UIStackView()
+                r.axis = .horizontal; r.spacing = 10; r.distribution = .fillEqually
+                outer.addArrangedSubview(r)
+                row = r
             }
-            values.forEach { counts[$0, default: 0] += 1 }
+            let card = UIControl()
+            card.backgroundColor = colors[idx % colors.count]
+            card.layer.cornerRadius = 16; card.clipsToBounds = true
+            card.heightAnchor.constraint(equalToConstant: 80).isActive = true
+            card.accessibilityLabel = "\(region.name), \(region.stationcount) stations"
+            card.accessibilityTraits = .button
+            card.addAction(UIAction { [weak self] _ in
+                self?.navigate(title: region.name, query: region.codes.first ?? "", filter: "countrycode")
+            }, for: .touchUpInside)
+
+            let nameLabel = RdioDesign.title(region.name, size: 19)
+            nameLabel.isUserInteractionEnabled = false
+            nameLabel.translatesAutoresizingMaskIntoConstraints = false
+            let countLabel2 = RdioDesign.secondary(countLabel(region.stationcount), size: 13)
+            countLabel2.isUserInteractionEnabled = false
+            countLabel2.translatesAutoresizingMaskIntoConstraints = false
+            card.addSubview(nameLabel)
+            card.addSubview(countLabel2)
+            NSLayoutConstraint.activate([
+                nameLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+                nameLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 18),
+                countLabel2.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+                countLabel2.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4)
+            ])
+            row?.addArrangedSubview(card)
         }
-        return counts
-            .map { RdioMetadataItem(name: $0.key, count: $0.value) }
-            .sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
-            .prefix(8)
-            .map { $0 }
+        if let last = outer.arrangedSubviews.last as? UIStackView, last.arrangedSubviews.count == 1 {
+            last.addArrangedSubview(UIView())
+        }
+        return outer
     }
 
-    private func openSearch(query: String, filter: String) {
-        experienceDelegate?.rdioDidRequestStationList(title: query.isEmpty ? filter : query, query: query, filter: filter, from: self)
+    private func divider() -> UIView {
+        let v = UIView()
+        v.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        v.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return v
+    }
+
+    private func countLabel(_ n: Int) -> String {
+        n >= 1000 ? String(format: "%.1fk stations", Double(n) / 1000) : "\(n) stations"
+    }
+
+    private func flagEmoji(_ code: String) -> String {
+        let base: UInt32 = 127397
+        return String(code.uppercased().unicodeScalars.compactMap {
+            UnicodeScalar($0.value + base)
+        }.map { Character($0) })
+    }
+
+    private func navigate(title: String, query: String, filter: String) {
+        experienceDelegate?.rdioDidRequestStationList(title: title, query: query, filter: filter, from: self)
     }
 
     @objc private func aboutPressed() {
         experienceDelegate?.rdioDidRequestAbout(from: self)
+    }
+
+    @objc private func searchPressed() {
+        experienceDelegate?.rdioDidRequestSearch(query: "", filter: "All", from: self)
     }
 }
 
@@ -1076,9 +1254,15 @@ final class RdioLibraryViewController: RdioBaseViewController {
         header.axis = .horizontal
         header.distribution = .equalSpacing
         header.addArrangedSubview(RdioDesign.title("library"))
+        let actions = UIStackView()
+        actions.spacing = 14
+        let search = RdioDesign.iconButton("magnifyingglass")
+        search.addTarget(self, action: #selector(searchPressed), for: .touchUpInside)
         let bell = RdioDesign.iconButton("bell")
         bell.addTarget(self, action: #selector(aboutPressed), for: .touchUpInside)
-        header.addArrangedSubview(bell)
+        actions.addArrangedSubview(search)
+        actions.addArrangedSubview(bell)
+        header.addArrangedSubview(actions)
         contentStack.addArrangedSubview(header)
 
         let tabs = UIStackView()
@@ -1110,23 +1294,27 @@ final class RdioLibraryViewController: RdioBaseViewController {
         case "collections":
             listStack.addArrangedSubview(collectionGroup(rows: secondaryCollections()))
         case "history":
-            let historyItems = Array(stations.prefix(8))
-            if !historyItems.isEmpty {
-                listStack.addArrangedSubview(stationGroup(historyItems, showsHeart: false))
+            let historyItems = StationStore.shared.recentlyPlayed
+            if historyItems.isEmpty {
+                listStack.addArrangedSubview(RdioDesign.emptyState("Play a station to see it here."))
+            } else {
+                listStack.addArrangedSubview(stationGroup(Array(historyItems.prefix(20)), showsHeart: true))
             }
         default:
             listStack.addArrangedSubview(collectionCard(favoriteCollection()))
             listStack.setCustomSpacing(10, after: listStack.arrangedSubviews.last!)
             listStack.addArrangedSubview(collectionGroup(rows: secondaryCollections()))
 
-            let favItems = favoriteStations()
+            let favItems = StationStore.shared.favorites
             if !favItems.isEmpty {
                 listStack.addArrangedSubview(stationGroup(favItems, showsHeart: true))
+            } else {
+                listStack.addArrangedSubview(RdioDesign.emptyState("No favorites yet. Tap ♥ to save stations."))
             }
         }
 
         if listStack.arrangedSubviews.isEmpty {
-            listStack.addArrangedSubview(RdioDesign.emptyState("No live stations loaded yet."))
+            listStack.addArrangedSubview(RdioDesign.emptyState("Nothing here yet."))
         }
     }
 
@@ -1207,7 +1395,7 @@ final class RdioLibraryViewController: RdioBaseViewController {
         labels.axis = .vertical
         labels.spacing = 3
         labels.addArrangedSubview(RdioDesign.title(collection.title, size: 18))
-        labels.addArrangedSubview(RdioDesign.secondary("\(collection.stations.count) stations", size: 14))
+        labels.addArrangedSubview(RdioDesign.secondary(collection.subtitle, size: 14))
         let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
         chevron.tintColor = Config.tertiaryTextColor
         chevron.contentMode = .scaleAspectFit
@@ -1219,7 +1407,7 @@ final class RdioLibraryViewController: RdioBaseViewController {
         row.addArrangedSubview(labels)
         row.addArrangedSubview(chevron)
         let control = UIButton(type: .custom)
-        control.accessibilityLabel = "\(collection.title), \(collection.stations.count) stations"
+        control.accessibilityLabel = "\(collection.title), \(collection.subtitle)"
         control.addSubview(row)
         row.translatesAutoresizingMaskIntoConstraints = false
         control.addAction(UIAction { [weak self] _ in
@@ -1236,65 +1424,31 @@ final class RdioLibraryViewController: RdioBaseViewController {
     }
 
     private func openCollection(_ collection: RdioLibraryCollection) {
-        let detail = RdioStationListViewController(title: collection.title, stations: collection.stations)
+        let detail: RdioStationListViewController
+        if collection.isServerBacked {
+            detail = RdioStationListViewController(title: collection.title, query: collection.query, filter: collection.filter)
+        } else {
+            detail = RdioStationListViewController(title: collection.title, stations: collection.stations)
+        }
         detail.experienceDelegate = experienceDelegate
         navigationController?.pushViewController(detail, animated: true)
     }
 
     private func favoriteCollection() -> RdioLibraryCollection {
-        RdioLibraryCollection(title: "Favorite Stations", icon: "heart.fill", stations: favoriteStations())
+        RdioLibraryCollection(title: "Favorites", icon: "heart.fill", stations: StationStore.shared.favorites)
     }
 
     private func secondaryCollections() -> [RdioLibraryCollection] {
         [
-            RdioLibraryCollection(title: "Morning Drive", icon: "sun.max", stations: driveStations()),
-            RdioLibraryCollection(title: "Focus Mode", icon: "target", stations: focusStations()),
-            RdioLibraryCollection(title: "Global News", icon: "globe", stations: newsStations())
+            RdioLibraryCollection(title: "Trending Now", icon: "arrow.up.right", query: "", filter: "Trending"),
+            RdioLibraryCollection(title: "News & Talk", icon: "mic", query: "news", filter: "Genres"),
+            RdioLibraryCollection(title: "Focus Mode", icon: "target", query: "lofi", filter: "Genres"),
+            RdioLibraryCollection(title: "Music", icon: "music.note", query: "music", filter: "Genres"),
         ]
     }
 
     private func favoriteStations() -> [RadioStation] {
-        Array(stations.prefix(6))
-    }
-
-    private func driveStations() -> [RadioStation] {
-        let matches = stations.filter { $0.matches("morning") || $0.matches("drive") || $0.matches("hits") }
-        return matches.isEmpty ? Array(stations.prefix(6)) : Array(matches.prefix(8))
-    }
-
-    private func focusStations() -> [RadioStation] {
-        let matches = stations.filter { $0.matches("lofi") || $0.matches("ambient") || $0.matches("focus") || $0.matches("chill") }
-        return matches.isEmpty ? Array(stations.prefix(8)) : Array(matches.prefix(8))
-    }
-
-    private func newsStations() -> [RadioStation] {
-        let matches = stations.filter { $0.matches("news") || $0.matches("bbc") || $0.matches("npr") || $0.matches("public") }
-        return matches.isEmpty ? Array(stations.prefix(8)) : Array(matches.prefix(10))
-    }
-
-    private func collectionItems() -> [RdioMetadataItem] {
-        metadataItems { $0.genreNames }
-    }
-
-    private func countryItems() -> [RdioMetadataItem] {
-        metadataItems { station in
-            station.countryName.map { [$0] } ?? []
-        }
-    }
-
-    private func metadataItems(values: (RadioStation) -> [String]) -> [RdioMetadataItem] {
-        var counts: [String: Int] = [:]
-        stations.forEach { station in
-            values(station).forEach { counts[$0, default: 0] += 1 }
-        }
-        return counts
-            .map { RdioMetadataItem(name: $0.key, count: $0.value) }
-            .sorted {
-                if $0.count == $1.count { return $0.name < $1.name }
-                return $0.count > $1.count
-            }
-            .prefix(4)
-            .map { $0 }
+        StationStore.shared.favorites
     }
 
     private func updateTabs() {
@@ -1307,6 +1461,141 @@ final class RdioLibraryViewController: RdioBaseViewController {
 
     @objc private func aboutPressed() {
         experienceDelegate?.rdioDidRequestAbout(from: self)
+    }
+
+    @objc private func searchPressed() {
+        experienceDelegate?.rdioDidRequestSearch(query: "", filter: "All", from: self)
+    }
+}
+
+final class RdioCountryListViewController: UIViewController {
+    weak var experienceDelegate: RdioExperienceDelegate?
+
+    private var countries: [ExploreMetadataItem] = []
+    private let tableView = UITableView(frame: .zero, style: .plain)
+    private let spinner = UIActivityIndicatorView(style: .medium)
+    private lazy var nowPlayingDock = RdioNowPlayingDockView { [weak self] in
+        guard let self else { return }
+        self.experienceDelegate?.rdioDidRequestNowPlaying(from: self)
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = Config.backgroundColor
+        buildLayout()
+        loadCountries()
+        StationsManager.shared.addObserver(self)
+        FRadioPlayer.shared.addObserver(self)
+    }
+
+    deinit {
+        StationsManager.shared.removeObserver(self)
+        FRadioPlayer.shared.removeObserver(self)
+    }
+
+    private func buildLayout() {
+        let header = UIView()
+        header.translatesAutoresizingMaskIntoConstraints = false
+
+        let back = RdioDesign.iconButton("chevron.left", pointSize: 22)
+        back.translatesAutoresizingMaskIntoConstraints = false
+        back.addTarget(self, action: #selector(backPressed), for: .touchUpInside)
+        header.addSubview(back)
+
+        let titleLabel = RdioDesign.title("Countries", size: 28)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(titleLabel)
+
+        tableView.backgroundColor = .clear
+        tableView.separatorStyle = .none
+        tableView.rowHeight = 62
+        tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 104, right: 0)
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+
+        spinner.color = Config.tintColor
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(header)
+        view.addSubview(tableView)
+        view.addSubview(spinner)
+        view.addSubview(nowPlayingDock)
+
+        NSLayoutConstraint.activate([
+            header.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            header.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: RdioDesign.horizontalInset),
+            header.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -RdioDesign.horizontalInset),
+            header.heightAnchor.constraint(equalToConstant: 52),
+            back.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            back.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            tableView.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            nowPlayingDock.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 18),
+            nowPlayingDock.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -18),
+            nowPlayingDock.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+            spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+        nowPlayingDock.refresh()
+    }
+
+    private func loadCountries() {
+        spinner.startAnimating()
+        Task { [weak self] in
+            do {
+                let countries = try await NetworkService.fetchCountries(limit: 500)
+                await MainActor.run {
+                    self?.spinner.stopAnimating()
+                    self?.countries = countries
+                    self?.tableView.reloadData()
+                }
+            } catch {
+                await MainActor.run {
+                    self?.spinner.stopAnimating()
+                    if Config.debugLog { print("Country list: \(error)") }
+                }
+            }
+        }
+    }
+
+    @objc private func backPressed() {
+        navigationController?.popViewController(animated: true)
+    }
+}
+
+extension RdioCountryListViewController: StationsManagerObserver, FRadioPlayerObserver {
+    func stationsManager(_ manager: StationsManager, stationsDidUpdate stations: [RadioStation]) {}
+    func stationsManager(_ manager: StationsManager, stationDidChange station: RadioStation?) { nowPlayingDock.refresh() }
+    func radioPlayer(_ player: FRadioPlayer, playbackStateDidChange state: FRadioPlayer.PlaybackState) { nowPlayingDock.refresh() }
+}
+
+extension RdioCountryListViewController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        countries.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+        let country = countries[indexPath.row]
+        cell.backgroundColor = .clear
+        cell.selectionStyle = .none
+        cell.textLabel?.text = country.name
+        cell.textLabel?.textColor = Config.primaryTextColor
+        cell.textLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+        cell.detailTextLabel?.text = country.stationcount >= 1000 ? String(format: "%.1fk stations", Double(country.stationcount) / 1000) : "\(country.stationcount) stations"
+        cell.detailTextLabel?.textColor = Config.secondaryTextColor
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let country = countries[indexPath.row]
+        experienceDelegate?.rdioDidRequestStationList(title: country.name, query: country.name, filter: "Countries", from: self)
     }
 }
 
@@ -1321,6 +1610,10 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
     private var remoteResults: [RadioStation] = []
     private var remoteSearchKey = ""
     private var remoteSearchTask: Task<Void, Never>?
+    private lazy var nowPlayingDock = RdioNowPlayingDockView { [weak self] in
+        guard let self else { return }
+        self.experienceDelegate?.rdioDidRequestNowPlaying(from: self)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -1330,6 +1623,16 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
     }
 
     private func build() {
+        let header = UIStackView()
+        header.axis = .horizontal
+        header.alignment = .center
+        header.spacing = 12
+        let back = RdioDesign.iconButton("chevron.left", pointSize: 22)
+        back.addTarget(self, action: #selector(backPressed), for: .touchUpInside)
+        header.addArrangedSubview(back)
+        header.addArrangedSubview(RdioDesign.title("search"))
+        contentStack.addArrangedSubview(header)
+
         let searchRow = UIStackView()
         searchRow.axis = .horizontal
         searchRow.spacing = 16
@@ -1372,9 +1675,18 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
         showsStack.axis = .vertical
         showsStack.spacing = 18
         contentStack.addArrangedSubview(showsStack)
+
+        view.addSubview(nowPlayingDock)
+        NSLayoutConstraint.activate([
+            nowPlayingDock.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 18),
+            nowPlayingDock.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -18),
+            nowPlayingDock.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+        ])
+        nowPlayingDock.refresh()
     }
 
     override func reloadContent() {
+        nowPlayingDock.refresh()
         updateFilterSelection()
         let includeStations = selectedFilter == "All" || selectedFilter == "Stations"
         let includeMetadata = selectedFilter == "Genres" || selectedFilter == "Countries"
@@ -1437,6 +1749,10 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
         reloadContent()
     }
 
+    @objc private func backPressed() {
+        navigationController?.popViewController(animated: true)
+    }
+
     private func updateFilterSelection() {
         for button in filterButtons {
             let selected = button.title(for: .normal) == selectedFilter
@@ -1452,7 +1768,7 @@ final class RdioSearchViewController: RdioBaseViewController, UITextFieldDelegat
             return
         }
         items.forEach { station in
-            resultsStack.addArrangedSubview(RdioStationRow(station: station, showsHeart: false) { [weak self] in
+            resultsStack.addArrangedSubview(RdioStationRow(station: station, showsHeart: true) { [weak self] in
                 guard let self else { return }
                 self.experienceDelegate?.rdioDidSelectStation(station, from: self)
             })
@@ -1602,6 +1918,7 @@ final class RdioStationRow: UIControl {
     private let station: RadioStation
     private let action: () -> Void
     private let compactMetrics: Bool
+    private var favoriteButton: UIButton?
 
     init(station: RadioStation, showsChevron: Bool = false, showsHeart: Bool = false, compactMetrics: Bool = false, action: @escaping () -> Void) {
         self.station = station
@@ -1620,6 +1937,12 @@ final class RdioStationRow: UIControl {
     }
 
     private func build(showsChevron: Bool, showsHeart: Bool) {
+        let isCurrent = StationsManager.shared.currentStation == station
+        layer.cornerRadius = compactMetrics ? 10 : 16
+        layer.borderWidth = isCurrent ? 2 : 0
+        layer.borderColor = Config.tintColor.cgColor
+        backgroundColor = isCurrent ? Config.tintColor.withAlphaComponent(0.10) : .clear
+
         let stack = UIStackView()
         stack.isUserInteractionEnabled = false
         stack.axis = .horizontal
@@ -1662,12 +1985,28 @@ final class RdioStationRow: UIControl {
 
         let symbol = showsChevron ? "chevron.right" : (showsHeart ? "heart.fill" : "play.fill")
         let image = UIImageView(image: UIImage(systemName: symbol))
-        image.tintColor = showsHeart ? Config.tintColor : Config.primaryTextColor
+        image.tintColor = showsHeart ? favoriteTintColor : Config.primaryTextColor
         image.contentMode = .scaleAspectFit
         if showsHeart || showsChevron {
             let iconSize: CGFloat = compactMetrics ? 24 : 26
-            image.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
-            image.heightAnchor.constraint(equalToConstant: iconSize).isActive = true
+            if showsHeart {
+                let button = UIButton(type: .system)
+                button.setImage(UIImage(systemName: favoriteSymbol), for: .normal)
+                button.tintColor = favoriteTintColor
+                button.translatesAutoresizingMaskIntoConstraints = false
+                button.widthAnchor.constraint(equalToConstant: max(44, iconSize)).isActive = true
+                button.heightAnchor.constraint(equalToConstant: max(44, iconSize)).isActive = true
+                button.addTarget(self, action: #selector(favoritePressed), for: .touchUpInside)
+                favoriteButton = button
+                addSubview(button)
+                NSLayoutConstraint.activate([
+                    button.trailingAnchor.constraint(equalTo: trailingAnchor, constant: compactMetrics ? -12 : -4),
+                    button.centerYAnchor.constraint(equalTo: centerYAnchor)
+                ])
+            } else {
+                image.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
+                image.heightAnchor.constraint(equalToConstant: iconSize).isActive = true
+            }
         }
         if !showsChevron && !showsHeart {
             let circle = UIView()
@@ -1683,7 +2022,7 @@ final class RdioStationRow: UIControl {
                 image.centerYAnchor.constraint(equalTo: circle.centerYAnchor)
             ])
             stack.addArrangedSubview(circle)
-        } else {
+        } else if !showsHeart {
             stack.addArrangedSubview(image)
         }
 
@@ -1698,6 +2037,20 @@ final class RdioStationRow: UIControl {
     @objc private func tapped() {
         action()
     }
+
+    @objc private func favoritePressed() {
+        StationStore.shared.toggleFavorite(station)
+        favoriteButton?.setImage(UIImage(systemName: favoriteSymbol), for: .normal)
+        favoriteButton?.tintColor = favoriteTintColor
+    }
+
+    private var favoriteSymbol: String {
+        StationStore.shared.isFavorite(station) ? "heart.fill" : "heart"
+    }
+
+    private var favoriteTintColor: UIColor {
+        StationStore.shared.isFavorite(station) ? Config.tintColor : Config.secondaryTextColor
+    }
 }
 
 final class RdioMiniPlayerView: UIControl {
@@ -1707,7 +2060,7 @@ final class RdioMiniPlayerView: UIControl {
         heightAnchor.constraint(equalToConstant: 86).isActive = true
         addAction(UIAction { _ in action() }, for: .touchUpInside)
 
-        let row = RdioStationRow(station: station, showsHeart: false, action: action)
+        let row = RdioStationRow(station: station, showsHeart: true, action: action)
         row.translatesAutoresizingMaskIntoConstraints = false
         addSubview(row)
         NSLayoutConstraint.activate([
@@ -1720,6 +2073,95 @@ final class RdioMiniPlayerView: UIControl {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+final class RdioNowPlayingDockView: UIControl {
+    private let artView = UIImageView()
+    private let titleLabel = UILabel()
+    private let subtitleLabel = UILabel()
+    private let playIcon = UIImageView(image: UIImage(systemName: "play.fill"))
+    private let action: () -> Void
+    private var configuredName = ""
+
+    init(action: @escaping () -> Void) {
+        self.action = action
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        addTarget(self, action: #selector(tapped), for: .touchUpInside)
+        build()
+        refresh()
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func refresh() {
+        guard let station = StationsManager.shared.currentStation else {
+            isHidden = true
+            return
+        }
+        isHidden = false
+        configuredName = station.name
+        titleLabel.text = station.name
+        subtitleLabel.text = station.desc
+        playIcon.image = UIImage(systemName: FRadioPlayer.shared.isPlaying ? "stop.fill" : "play.fill")
+        station.getImage { [weak self] image in
+            guard self?.configuredName == station.name else { return }
+            self?.artView.image = image
+        }
+    }
+
+    private func build() {
+        RdioDesign.applyCardStyle(self, radius: 18)
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.25
+        layer.shadowRadius = 18
+        layer.shadowOffset = CGSize(width: 0, height: -4)
+
+        artView.backgroundColor = Config.secondaryBackgroundColor
+        artView.contentMode = .scaleAspectFill
+        artView.clipsToBounds = true
+        artView.layer.cornerRadius = 12
+        artView.translatesAutoresizingMaskIntoConstraints = false
+
+        titleLabel.font = .systemFont(ofSize: 17, weight: .bold)
+        titleLabel.textColor = Config.primaryTextColor
+        titleLabel.lineBreakMode = .byTruncatingTail
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        subtitleLabel.textColor = Config.secondaryTextColor
+        subtitleLabel.lineBreakMode = .byTruncatingTail
+
+        let labels = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])
+        labels.axis = .vertical
+        labels.spacing = 2
+        labels.translatesAutoresizingMaskIntoConstraints = false
+
+        playIcon.tintColor = Config.tintColor
+        playIcon.contentMode = .scaleAspectFit
+        playIcon.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(artView)
+        addSubview(labels)
+        addSubview(playIcon)
+
+        NSLayoutConstraint.activate([
+            heightAnchor.constraint(equalToConstant: 72),
+            artView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            artView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            artView.widthAnchor.constraint(equalToConstant: 48),
+            artView.heightAnchor.constraint(equalToConstant: 48),
+            labels.leadingAnchor.constraint(equalTo: artView.trailingAnchor, constant: 14),
+            labels.centerYAnchor.constraint(equalTo: centerYAnchor),
+            labels.trailingAnchor.constraint(equalTo: playIcon.leadingAnchor, constant: -12),
+            playIcon.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -18),
+            playIcon.centerYAnchor.constraint(equalTo: centerYAnchor),
+            playIcon.widthAnchor.constraint(equalToConstant: 26),
+            playIcon.heightAnchor.constraint(equalToConstant: 26)
+        ])
+    }
+
+    @objc private func tapped() {
+        action()
     }
 }
 
@@ -1851,7 +2293,9 @@ final class RdioStationCell: UITableViewCell {
     private let artView = UIImageView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private let favoriteButton = UIButton(type: .system)
     private var configuredName = ""
+    private var station: RadioStation?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -1869,9 +2313,16 @@ final class RdioStationCell: UITableViewCell {
     }
 
     func configure(station: RadioStation) {
+        self.station = station
         configuredName = station.name
         titleLabel.text = station.name
         subtitleLabel.text = station.desc
+        let isCurrent = StationsManager.shared.currentStation == station
+        contentView.layer.cornerRadius = 14
+        contentView.layer.borderWidth = isCurrent ? 2 : 0
+        contentView.layer.borderColor = Config.tintColor.cgColor
+        contentView.backgroundColor = isCurrent ? Config.tintColor.withAlphaComponent(0.10) : .clear
+        updateFavoriteButton()
         station.getImage { [weak self] image in
             guard self?.configuredName == station.name else { return }
             self?.artView.image = image
@@ -1911,8 +2362,12 @@ final class RdioStationCell: UITableViewCell {
         playIcon.translatesAutoresizingMaskIntoConstraints = false
         playCircle.addSubview(playIcon)
 
+        favoriteButton.translatesAutoresizingMaskIntoConstraints = false
+        favoriteButton.addTarget(self, action: #selector(favoritePressed), for: .touchUpInside)
+
         contentView.addSubview(artView)
         contentView.addSubview(labels)
+        contentView.addSubview(favoriteButton)
         contentView.addSubview(playCircle)
 
         NSLayoutConstraint.activate([
@@ -1922,8 +2377,13 @@ final class RdioStationCell: UITableViewCell {
             artView.heightAnchor.constraint(equalToConstant: 56),
 
             labels.leadingAnchor.constraint(equalTo: artView.trailingAnchor, constant: 14),
-            labels.trailingAnchor.constraint(equalTo: playCircle.leadingAnchor, constant: -12),
+            labels.trailingAnchor.constraint(equalTo: favoriteButton.leadingAnchor, constant: -10),
             labels.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+
+            favoriteButton.trailingAnchor.constraint(equalTo: playCircle.leadingAnchor, constant: -8),
+            favoriteButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            favoriteButton.widthAnchor.constraint(equalToConstant: 40),
+            favoriteButton.heightAnchor.constraint(equalToConstant: 40),
 
             playCircle.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -RdioDesign.horizontalInset),
             playCircle.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
@@ -1935,6 +2395,20 @@ final class RdioStationCell: UITableViewCell {
             playIcon.widthAnchor.constraint(equalToConstant: 14),
             playIcon.heightAnchor.constraint(equalToConstant: 16)
         ])
+    }
+
+    @objc private func favoritePressed() {
+        guard let station else { return }
+        StationStore.shared.toggleFavorite(station)
+        updateFavoriteButton()
+    }
+
+    private func updateFavoriteButton() {
+        guard let station else { return }
+        let isFavorite = StationStore.shared.isFavorite(station)
+        favoriteButton.setImage(UIImage(systemName: isFavorite ? "heart.fill" : "heart"), for: .normal)
+        favoriteButton.tintColor = isFavorite ? Config.tintColor : Config.secondaryTextColor
+        favoriteButton.accessibilityLabel = isFavorite ? "Remove favorite" : "Add favorite"
     }
 }
 

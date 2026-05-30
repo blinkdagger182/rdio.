@@ -73,6 +73,9 @@
 		CE6A3E31291F376D0058C82A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D260901B45D20000DE671C /* Config.swift */; };
 		CE6A3E33291F376D0058C82A /* ShareActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53113F38230C720900462C0E /* ShareActivity.swift */; };
 		CE6A3E35291F376D0058C82A /* StationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE963ECB29135A6F004F299E /* StationsManager.swift */; };
+		AA11BB22CC330002DDEEFF00 /* StationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC330001DDEEFF00 /* StationStore.swift */; };
+		BB11CC22DD330002EEFF0011 /* RdioGlobeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD330001EEFF0011 /* RdioGlobeView.swift */; };
+		BB11CC22DD330005EEFF0011 /* earth-dark.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD330004EEFF0011 /* earth-dark.jpg */; };
 		CE6A3E36291F376D0058C82A /* InfoDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D1D0A41AD6D6230022CA11 /* InfoDetailViewController.swift */; };
 		CE6A3E37291F376D0058C82A /* LogoShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6258DCD722D93A3500166C65 /* LogoShareView.swift */; };
 		CE6A3E39291F376D0058C82A /* UIImage+DropShadow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E9761B1B1A8F3200F52B1E /* UIImage+DropShadow.swift */; };
@@ -93,6 +96,9 @@
 		CE6ECD03292F358C008B3C16 /* UIViewController+Email.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6ECD02292F358C008B3C16 /* UIViewController+Email.swift */; };
 		CE6ECD04292F358C008B3C16 /* UIViewController+Email.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6ECD02292F358C008B3C16 /* UIViewController+Email.swift */; };
 		CE963ECC29135A6F004F299E /* StationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE963ECB29135A6F004F299E /* StationsManager.swift */; };
+		AA11BB22CC330003DDEEFF00 /* StationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC330001DDEEFF00 /* StationStore.swift */; };
+		BB11CC22DD330003EEFF0011 /* RdioGlobeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD330001EEFF0011 /* RdioGlobeView.swift */; };
+		BB11CC22DD330006EEFF0011 /* earth-dark.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD330004EEFF0011 /* earth-dark.jpg */; };
 		CE9EE8DE293BB41300F62041 /* BaseController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9EE8DD293BB41300F62041 /* BaseController.swift */; };
 		CE9EE8DF293BB41300F62041 /* BaseController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9EE8DD293BB41300F62041 /* BaseController.swift */; };
 		CE9EE8E1293C048A00F62041 /* LoaderController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9EE8E0293C048A00F62041 /* LoaderController.swift */; };
@@ -156,6 +162,7 @@
 		9409E11B1ABF6FEA00312E2B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		9409E1251ABF6FEA00312E2B /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		94452E541AD7086800BFE7A5 /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
+		BB11CC22DD330004EEFF0011 /* earth-dark.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "earth-dark.jpg"; sourceTree = "<group>"; };
 		945DB3C11AD58E3A00495EBB /* stations.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = stations.json; sourceTree = "<group>"; };
 		945DB3C41AD5A6E200495EBB /* NothingFoundCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = NothingFoundCell.xib; sourceTree = "<group>"; };
 		94AC70AD1AD05C6200652982 /* RadioStation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadioStation.swift; sourceTree = "<group>"; };
@@ -188,6 +195,9 @@
 		CE6ECCFC292F1445008B3C16 /* MainCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainCoordinator.swift; sourceTree = "<group>"; };
 		CE6ECD02292F358C008B3C16 /* UIViewController+Email.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Email.swift"; sourceTree = "<group>"; };
 		CE963ECB29135A6F004F299E /* StationsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationsManager.swift; sourceTree = "<group>"; };
+		AA11BB22CC330001DDEEFF00 /* StationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationStore.swift; sourceTree = "<group>"; };
+		BB11CC22DD330001EEFF0011 /* RdioGlobeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RdioGlobeView.swift; sourceTree = "<group>"; };
+		BB11CC22DD330004EEFF0011 /* earth-dark.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "earth-dark.jpg"; sourceTree = "<group>"; };
 		CE9EE8DD293BB41300F62041 /* BaseController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseController.swift; sourceTree = "<group>"; };
 		CE9EE8E0293C048A00F62041 /* LoaderController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoaderController.swift; sourceTree = "<group>"; };
 		CEA82F492921F260009E9FA0 /* Info-CarPlay.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "Info-CarPlay.plist"; sourceTree = "<group>"; };
@@ -330,6 +340,7 @@
 				CEE9A27A2B535C780018FE68 /* AlbumArtworkView.swift */,
 				CEE9A27D2B54A5520018FE68 /* ControlsView.swift */,
 				CA5F00012F40A00000000001 /* GradientBackgroundView.swift */,
+				BB11CC22DD330001EEFF0011 /* RdioGlobeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -372,6 +383,7 @@
 			isa = PBXGroup;
 			children = (
 				945DB3C11AD58E3A00495EBB /* stations.json */,
+				BB11CC22DD330004EEFF0011 /* earth-dark.jpg */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -381,6 +393,8 @@
 			children = (
 				94AC70AD1AD05C6200652982 /* RadioStation.swift */,
 				CE963ECB29135A6F004F299E /* StationsManager.swift */,
+				AA11BB22CC330001DDEEFF00 /* StationStore.swift */,
+				BB11CC22DD330004EEFF0011 /* earth-dark.jpg */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -562,6 +576,7 @@
 				6258DCDA22D93A5400166C65 /* LogoShareView.xib in Resources */,
 				9409E1261ABF6FEA00312E2B /* Images.xcassets in Resources */,
 				CA5F00042F41000000000001 /* Localizable.xcstrings in Resources */,
+				BB11CC22DD330005EEFF0011 /* earth-dark.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -574,6 +589,7 @@
 				CE6A3E48291F376D0058C82A /* LogoShareView.xib in Resources */,
 				CE6A3E4B291F376D0058C82A /* Images.xcassets in Resources */,
 				CA5F00052F41000000000002 /* Localizable.xcstrings in Resources */,
+				BB11CC22DD330006EEFF0011 /* earth-dark.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -607,6 +623,8 @@
 				53113F39230C720900462C0E /* ShareActivity.swift in Sources */,
 				CA142F682D3D8E2F0071A388 /* NSLayoutConstraint+with.swift in Sources */,
 				CE963ECC29135A6F004F299E /* StationsManager.swift in Sources */,
+				AA11BB22CC330003DDEEFF00 /* StationStore.swift in Sources */,
+				BB11CC22DD330003EEFF0011 /* RdioGlobeView.swift in Sources */,
 				CE321FF329371140001572BD /* Bundle+appName.swift in Sources */,
 				CE6ECCFA292F13DF008B3C16 /* Coordinator.swift in Sources */,
 				94D1D0A51AD6D6230022CA11 /* InfoDetailViewController.swift in Sources */,
@@ -652,6 +670,8 @@
 				CE6A3E33291F376D0058C82A /* ShareActivity.swift in Sources */,
 				CA142F672D3D8E2F0071A388 /* NSLayoutConstraint+with.swift in Sources */,
 				CE6A3E35291F376D0058C82A /* StationsManager.swift in Sources */,
+				AA11BB22CC330002DDEEFF00 /* StationStore.swift in Sources */,
+				BB11CC22DD330002EEFF0011 /* RdioGlobeView.swift in Sources */,
 				CE321FF429371140001572BD /* Bundle+appName.swift in Sources */,
 				CE6ECCFB292F13E6008B3C16 /* Coordinator.swift in Sources */,
 				CE6A3E36291F376D0058C82A /* InfoDetailViewController.swift in Sources */,

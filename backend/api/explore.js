@@ -22,13 +22,74 @@ const LOCAL_CODES = ['MY', 'SG', 'ID', 'BN', 'TH', 'PH', 'VN']
 const FEATURED_CODES = ['US', 'GB', 'JP', 'AU', 'DE', 'FR', 'KR', 'CA', 'NL', 'IN']
 
 const REGIONS = [
-  { name: 'Asia', codes: ['MY', 'SG', 'ID', 'TH', 'PH', 'JP', 'KR', 'CN', 'IN', 'VN', 'BN', 'HK', 'TW'] },
-  { name: 'Europe', codes: ['GB', 'DE', 'FR', 'NL', 'ES', 'IT', 'PL', 'SE', 'NO', 'CH', 'AT', 'BE', 'RU', 'UA'] },
-  { name: 'North America', codes: ['US', 'CA', 'MX'] },
-  { name: 'South America', codes: ['BR', 'AR', 'CO', 'CL', 'PE'] },
-  { name: 'Middle East', codes: ['AE', 'SA', 'IR', 'TR', 'EG', 'IQ', 'JO'] },
-  { name: 'Africa', codes: ['ZA', 'NG', 'KE', 'GH', 'ET'] },
-  { name: 'Oceania', codes: ['AU', 'NZ', 'FJ', 'PG'] },
+  {
+    name: 'Southeast Asia',
+    codes: ['MY', 'SG', 'ID', 'TH', 'PH', 'VN', 'BN', 'KH', 'LA', 'MM', 'TL'],
+  },
+  {
+    name: 'East Asia',
+    codes: ['JP', 'KR', 'CN', 'HK', 'TW', 'MO', 'MN', 'KP'],
+  },
+  {
+    name: 'South Asia',
+    codes: ['IN', 'PK', 'BD', 'LK', 'NP', 'BT', 'MV', 'AF'],
+  },
+  {
+    name: 'Central Asia',
+    codes: ['KZ', 'UZ', 'TM', 'KG', 'TJ'],
+  },
+  {
+    name: 'Caucasus',
+    codes: ['GE', 'AM', 'AZ'],
+  },
+  {
+    name: 'Western Europe',
+    codes: ['GB', 'DE', 'FR', 'NL', 'BE', 'LU', 'CH', 'AT', 'IE', 'PT', 'ES', 'IT', 'MC', 'SM', 'MT', 'LI', 'AD', 'VA', 'GI'],
+  },
+  {
+    name: 'Northern Europe',
+    codes: ['SE', 'NO', 'FI', 'DK', 'IS', 'EE', 'LV', 'LT', 'FO', 'AX', 'SJ', 'IM', 'GG', 'GL'],
+  },
+  {
+    name: 'Eastern Europe',
+    codes: ['RU', 'UA', 'BY', 'PL', 'CZ', 'SK', 'HU', 'RO', 'BG', 'MD', 'RS', 'HR', 'SI', 'BA', 'ME', 'MK', 'AL', 'XK', 'GR', 'CY'],
+  },
+  {
+    name: 'North America',
+    codes: ['US', 'CA', 'MX', 'GT', 'BZ', 'HN', 'SV', 'NI', 'CR', 'PA'],
+  },
+  {
+    name: 'Caribbean',
+    codes: ['CU', 'JM', 'HT', 'DO', 'PR', 'TT', 'BB', 'LC', 'VC', 'GD', 'AG', 'DM', 'KN', 'BS', 'TC', 'KY', 'BM', 'AI', 'MS', 'VG', 'VI', 'CW', 'AW', 'BQ', 'GP', 'MQ', 'PM'],
+  },
+  {
+    name: 'South America',
+    codes: ['BR', 'AR', 'CO', 'CL', 'PE', 'VE', 'EC', 'BO', 'PY', 'UY', 'GY', 'SR', 'GF'],
+  },
+  {
+    name: 'Middle East',
+    codes: ['AE', 'SA', 'IR', 'TR', 'IQ', 'EG', 'JO', 'SY', 'LB', 'IL', 'KW', 'QA', 'BH', 'OM', 'YE', 'PS'],
+  },
+  {
+    name: 'North Africa',
+    codes: ['MA', 'DZ', 'TN', 'LY', 'SD', 'SS', 'ER', 'DJ', 'SO'],
+  },
+  {
+    name: 'West Africa',
+    codes: ['NG', 'GH', 'SN', 'CI', 'CM', 'ML', 'BF', 'GN', 'BJ', 'TG', 'SL', 'LR', 'MR', 'GW', 'GM', 'CV', 'NE'],
+  },
+  {
+    name: 'Central Africa',
+    codes: ['ET', 'KE', 'TZ', 'UG', 'RW', 'BI', 'CD', 'CG', 'CF', 'TD', 'GA', 'GQ', 'ST', 'CM'],
+  },
+  {
+    name: 'Southern Africa',
+    codes: ['ZA', 'ZW', 'ZM', 'MZ', 'MW', 'NA', 'BW', 'AO', 'SZ', 'LS', 'MG', 'MU', 'SC', 'KM', 'RE', 'YT'],
+  },
+  {
+    name: 'Oceania',
+    codes: ['AU', 'NZ', 'PG', 'FJ', 'SB', 'VU', 'WS', 'TO', 'KI', 'TV', 'NR', 'PW', 'FM', 'MH', 'CK', 'NC', 'PF', 'GU', 'AS', 'WF', 'NU'],
+  },
 ]
 
 const FEATURED_GENRE_NAMES = [

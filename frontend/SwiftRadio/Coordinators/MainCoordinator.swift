@@ -34,6 +34,7 @@ class MainCoordinator: NSObject, NavigationCoordinator {
 
     init(navigationController: UINavigationController) {
         self.navigationController = navigationController
+        super.init()
         self.navigationController.delegate = self
         self.navigationController.interactivePopGestureRecognizer?.isEnabled = true
         self.navigationController.interactivePopGestureRecognizer?.delegate = nil
